@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>नोट्स — JAC 10th Study Hub</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<header class="navbar" id="siteHeader"></header>
+
+<div class="page-hero" style="background:linear-gradient(120deg,#22c55e,#16a34a)">
+  <h1 data-i18n="pn_title">📖 महत्वपूर्ण नोट्स</h1>
+  <p data-i18n="pn_desc">रंग-बिरंगे, मानवीय भाषा में — हर विषय का पूरा सार</p>
+</div>
+
+<section class="section">
+  <div class="container">
+    <div class="tabs" id="notesTabs"></div>
+    <div id="notesContainer"></div>
+  </div>
+</section>
+
+<footer class="footer">
+  <p>🎓 JAC Board Class 10 Study Hub | NCERT Based</p>
+</footer>
+
+<script src="js/allquestions.js"></script>
+<script src="js/data.js"></script>
+<script src="js/common.js"></script>
+<script src="js/notes.js"></script>
+<script>
+function renderNotesTabs() {
+  const tabs = document.getElementById('notesTabs');
+  let html = '';
+  for (const s in SUBJECTS) {
+    html += `<button class="tab" data-subject="${s}" onclick="showSubjectNotes('${s}', this)">${SUBJECTS[s].emoji} ${SUBJECTS[s].name}</button>`;
+  }
+  tabs.innerHTML = html;
+
+  const fromURL = getURLParam('subject');
+  const target = (fromURL && SUBJECTS[fromURL]) ? fromURL : Object.keys(SUBJECTS)[0];
+  showSubjectNotes(target, tabs.querySelector('[data-subject="' + target + '"]'));
+}
+
+function showSubjectNotes(subject, btn) {
+  document.querySelectorAll('#notesTabs .tab').forEach(t => t.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  renderSubjectNotes('notesContainer', subject);
+}
+
+document.addEventListener('DOMContentLoaded', renderNotesTabs);
+</script>
+<script src="js/lang.js"></script>
+</body>
+</html>

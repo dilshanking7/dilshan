@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stunning 3D Cyberpunk Landing Page</title>
+    <style>
+        /* Base Reset */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Poppins', sans-serif;
+        }
+
+        body, html {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background-color: #03030c;
+            color: #ffffff;
+        }
+
+        /* 3D Canvas Container */
+        #canvas-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+        }
+
+        /* Front Layer UI Content */
+        .content-wrapper {
+            position: relative;
+            z-index: 2;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            padding: 20px;
+            /* Creates a cinematic gradient blend */
+            background: radial-gradient(circle at center, rgba(3,3,12,0.2) 0%, rgba(3,3,12,0.8) 80%);
+        }
+
+        h1 {
+            font-size: 4.5rem;
+            font-weight: 900;
+            letter-spacing: 1px;
+            margin-bottom: 15px;
+            background: linear-gradient(45deg, #00f2fe, #4facfe, #ff007f);
+            background-size: 200% auto;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            animation: shine 4s linear infinite;
+            text-transform: uppercase;
+        }
+
+        p {
+            font-size: 1.1rem;
+            max-width: 600px;
+            color: #8f8fa3;
+            margin-bottom: 35px;
+            line-height: 1.6;
+        }
+
+        /* Premium Interactive Button */
+        .glow-button {
+            padding: 16px 40px;
+            font-size: 1rem;
+            font-weight: 600;
+            color: #fff;
+            background: linear-gradient(45deg, #ff007f, #7f00ff);
+            border: none;
+            border-radius: 50px;
+            cursor: pointer;
+            box-shadow: 0 0 25px rgba(255, 0, 127, 0.4);
+            transition: all 0.3s ease;
+            text-decoration: none;
+        }
+
+        .glow-button:hover {
+            transform: translateY(-3px) scale(1.05);
+            box-shadow: 0 0 35px rgba(0, 242, 254, 0.8);
+            background: linear-gradient(45deg, #00f2fe, #4facfe);
+        }
+
+        @keyframes shine {
+            to { background-position: 200% center; }
+        }
+
+        @media (max-width: 768px) {
+            h1 { font-size: 2.8rem; }
+            p { font-size: 0.95rem; }
+        }
+    </style>
+    <!-- Importing Poppins Font -->
+    <link href="https://googleapis.com" rel="stylesheet">
+</head>
+<body>
+
+    <!-- Target for 3D Graphics Render -->
+    <div id="canvas-container"></div>
+
+    <!-- UI Overlay -->
+    <div class="content-wrapper">
+        <h1>Welcome To The Future</h1>
+        <p>Experience real-time interactive 3D digital landscape. Move your mouse cursor across the screen to bend the neon light matrix.</p>
+        <a href="#" class="glow-button">Enter The Matrix</a>
+    </div>
+
+    <!-- Three.js Engine Source via CDN -->
+    <script src="https://cloudflare.com"></script>
+
+    <script>
+        // Setup Scene, Camera & Renderer
+        const container = document.getElementById('canvas-container');
+        const scene = new THREE.Scene();
+        
+        const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.z = 8;
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(window.devicePixelRatio);
+        container.appendChild(renderer.domElement);
+
+        // Generating a Glowing Neon 3D Wave Helix
+        const particleCount = 2500;
+        const geometry = new THREE.BufferGeometry();
+        const positions = new Float32Array(particleCount * 3);
+        const colors = new Float32Array(particleCount * 3);
+
+        const color1 = new THREE.Color('#00f2fe'); // Neon Cyan
+        const color2 = new THREE.Color('#ff007f'); // Neon Pink
+
+        for (let i = 0; i < particleCount; i++) {
+            // Mathematical formulas to distribute dots in structural 3D wave waves
+            const t = (i / particleCount) * Math.PI * 20;
+            const r = 2.5 + Math.sin(t * 0.5) * 0.5; // Radius wave variations
+            
+            const x = Math.cos(t) * r;
+            const y = (i / particleCount) * 12 - 6; // Stack along Y axis
+            const z = Math.sin(t) * r;
+
+            positions[i * 3] = x;
+            positions[i * 3 + 1] = y;
+            positions[i * 3 + 2] = z;
+
+            // Smooth dual-color interpolation mix for amazing visuals
+            const mixedColor = color1.clone().lerp(color2, Math.sin(t) * 0.5 + 0.5);
+            colors[i * 3] = mixedColor.r;
+            colors[i * 3 + 1] = mixedColor.g;
+            colors[i * 3 + 2] = mixedColor.b;
+        }
+
+        geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+        geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+
+        // Point/Dot Material properties
+        const material = new THREE.PointsMaterial({
+            size: 0.05,
+            vertexColors: true,
+            transparent: true,
+            opacity: 0.8
+        });
+
+        const particleSystem = new THREE.Points(geometry, material);
+        scene.add(particleSystem);
+
+        // Track interactive mouse motion coordinates
+        let mouseX = 0;
+        let mouseY = 0;
+        
+        document.addEventListener('mousemove', (e) => {
+            mouseX = (e.clientX / window.innerWidth) - 0.5;
+            mouseY = (e.clientY / window.innerHeight) - 0.5;
+        });
+
+        // Infinite 60 FPS Render Loop Animation
+        const clock = new THREE.Clock();
+
+        function animate() {
+            requestAnimationFrame(animate);
+            const time = clock.getElapsedTime();
+
+            // Continuous rotation of 3D object
+            particleSystem.rotation.y = time * 0.15;
+            particleSystem.rotation.x = time * 0.05;
+
+            // Interactive response matrix bending shifts based on mouse movement
+            particleSystem.position.x += (mouseX * 3 - particleSystem.position.x) * 0.05;
+            particleSystem.position.y += (-mouseY * 3 - particleSystem.position.y) * 0.05;
+
+            renderer.render(scene, camera);
+        }
+
+        animate();
+
+        // Screen resizing handler setup
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+    </script>
+</body>
+</html>

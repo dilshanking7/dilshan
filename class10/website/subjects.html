@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>विषय — JAC 10th Study Hub</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<header class="navbar" id="siteHeader"></header>
+
+<div class="page-hero">
+  <h1 data-i18n="psub_title">📚 अपना विषय चुनें</h1>
+  <p data-i18n="psub_desc">हर विषय का अलग पेज — क्विज़, नोट्स, फॉर्मूले, सब कुछ</p>
+</div>
+
+<section class="section">
+  <div class="container">
+    <div class="subjects-grid" id="subjectsGrid"></div>
+  </div>
+</section>
+
+<footer class="footer">
+  <p>🎓 JAC Board Class 10 Study Hub | NCERT Based</p>
+</footer>
+
+<script src="js/allquestions.js"></script>
+<script src="js/data.js"></script>
+<script src="js/common.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  renderSubjectCards('subjectsGrid', 'subject.html');
+});
+</script>
+<script src="js/lang.js"></script>
+</body>
+</html>

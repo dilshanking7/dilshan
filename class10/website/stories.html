@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>कहानियाँ — JAC 10th Study Hub</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<header class="navbar" id="siteHeader"></header>
+
+<div class="page-hero" style="background:linear-gradient(120deg,#ea580c,#c2410c)">
+  <h1 data-i18n="pst_title">📗 सभी कहानियाँ</h1>
+  <p data-i18n="pst_desc">हिंदी + English — लेखक, सारांश, पात्र, सीख</p>
+</div>
+
+<section class="section">
+  <div class="container">
+    <div class="tabs" id="storyTabs">
+      <button class="tab active" data-key="hindiKsitij" onclick="showStories('hindiKsitij', this)">📖 हिंदी — क्षितिज</button>
+      <button class="tab" data-key="hindiKritika" onclick="showStories('hindiKritika', this)">📗 हिंदी — कृतिका</button>
+      <button class="tab" data-key="hindiSparsh" onclick="showStories('hindiSparsh', this)">📘 हिंदी — स्पर्श</button>
+      <button class="tab" data-key="hindiSanchayan" onclick="showStories('hindiSanchayan', this)">📙 हिंदी — संचयन</button>
+      <button class="tab" data-key="englishFirstFlight" onclick="showStories('englishFirstFlight', this)">🇬🇧 First Flight (Prose)</button>
+      <button class="tab" data-key="englishPoems" onclick="showStories('englishPoems', this)">🎭 English Poems</button>
+      <button class="tab" data-key="englishFootprints" onclick="showStories('englishFootprints', this)">👣 Footprints</button>
+    </div>
+    <div id="storiesContainer"></div>
+  </div>
+</section>
+
+<footer class="footer">
+  <p>🎓 JAC Board Class 10 Study Hub | NCERT Based</p>
+</footer>
+
+<script src="js/allquestions.js"></script>
+<script src="js/data.js"></script>
+<script src="js/common.js"></script>
+<script src="js/stories.js"></script>
+<script>
+function showStories(key, btn) {
+  document.querySelectorAll('#storyTabs .tab').forEach(t => t.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  renderStories('storiesContainer', key);
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  renderStories('storiesContainer', 'hindiKsitij');
+});
+</script>
+<script src="js/lang.js"></script>
+</body>
+</html>

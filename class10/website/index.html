@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>JAC 10th Study Hub — क्विज़, नोट्स, फॉर्मूले, प्रयोग</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<header class="navbar" id="siteHeader"></header>
+
+<section class="hero">
+  <div class="container">
+    <h1><span data-i18n="hero_i1">झारखंड बोर्ड कक्षा 10</span> <br><span class="gradient-text" data-i18n="hero_i2">परीक्षा की सुपर तैयारी</span></h1>
+    <p data-i18n="hero_idesc">3000+ प्रश्न • इंटरैक्टिव क्विज़ • सभी फॉर्मूले • प्रयोगशाला • कहानियाँ • तारीखें — सब एक ही जगह! 🚀</p>
+    <div class="hero-buttons">
+      <button class="btn btn-secondary btn-big" onclick="location.href='subjects.html'"><span data-i18n="cta_subjects">📚 विषय चुनें</span></button>
+      <button class="btn btn-primary btn-big" onclick="location.href='quiz.html'"><span data-i18n="cta_quiz">📝 क्विज़ शुरू करें</span></button>
+      <button class="btn btn-accent btn-big" onclick="location.href='formulas.html'"><span data-i18n="cta_formulas">🧮 फॉर्मूले</span></button>
+    </div>
+    <div class="hero-stats">
+      <div class="stat"><span class="stat-num" id="statStudents">0</span><span class="stat-label" data-i18n="stat_students">स्टूडेंट्स</span></div>
+      <div class="stat"><span class="stat-num" id="statQuestions">3000</span><span class="stat-label" data-i18n="stat_questions">प्रश्न</span></div>
+      <div class="stat"><span class="stat-num">10</span><span class="stat-label" data-i18n="stat_subjects">विषय</span></div>
+      <div class="stat"><span class="stat-num">24/7</span><span class="stat-label" data-i18n="stat_online">ऑनलाइन</span></div>
+    </div>
+  </div>
+</section>
+
+<section class="section">
+  <div class="container">
+    <div class="section-header">
+      <h2 data-i18n="home_sec_h">🌟 सब कुछ एक क्लिक पर</h2>
+      <p data-i18n="home_sec_d">हर फीचर अपने अलग पेज पर — जैसे ही click करेंगे, open होगा</p>
+    </div>
+    <div class="home-grid" id="homeGrid"></div>
+  </div>
+</section>
+
+<section class="section" style="background:#fff">
+  <div class="container">
+    <div class="section-header">
+      <h2 data-i18n="subs_sec_h">📚 अपना विषय चुनें</h2>
+      <p data-i18n="subs_sec_d">हर विषय में 300+ प्रश्न, नोट्स, फॉर्मूले और प्रैक्टिस</p>
+    </div>
+    <div class="subjects-grid" id="subjectsGrid"></div>
+  </div>
+</section>
+
+<footer class="footer">
+  <p data-i18n="footer_credit">🎓 JAC Board Class 10 Study Hub | NCERT Based | पिछले 5 वर्षों (2020-2024) के प्रश्न</p>
+  <p style="margin-top:8px;font-size:14px" data-i18n="footer_motto">💜 आपकी मेहनत ही आपकी सफलता है!</p>
+</footer>
+
+<script src="js/allquestions.js"></script>
+<script src="js/data.js"></script>
+<script src="js/common.js"></script>
+<script>
+const HOME_FEATURES = [
+  { icon:"📚", title:"विषय (Subjects)", desc:"10 विषय — हिंदी, English, गणित, विज्ञान (3 भाग), सामाजिक विज्ञान (4 भाग)। हर विषय का अलग पेज।", color:"#6366f1", page:"subjects.html" },
+  { icon:"📝", title:"क्विज़ (Quiz)", desc:"3 मोड — MCQ, लिखने वाला, मिक्स। Click करते ही पता चलेगा सही/गलत + विकल्प lock।", color:"#f59e0b", page:"quiz.html" },
+  { icon:"📖", title:"नोट्स", desc:"रंग-बिरंगे मानवीय नोट्स — हर विषय के महत्वपूर्ण टॉपिक आसान भाषा में।", color:"#22c55e", page:"notes.html" },
+  { icon:"🧮", title:"फॉर्मूले", desc:"गणित के सारे फॉर्मूले (किसके लिए क्या), त्रिकोणमिति सारणी + भौतिक व रसायन के।", color:"#8b5cf6", page:"formulas.html" },
+  { icon:"🧪", title:"आवर्त सारणी", desc:"पूरी Periodic Table — हर तत्व पर click करो, उसका नाम-वर्ग-द्रव्यमान जानो।", color:"#0d9488", page:"periodic.html" },
+  { icon:"🔬", title:"प्रयोगशाला (Lab)", desc:"भौतिक, रसायन, जीव विज्ञान के प्रयोग — उद्देश्य, सामान, विधि, अवलोकन, सावधानियाँ।", color:"#dc2626", page:"lab.html" },
+  { icon:"📗", title:"कहानियाँ", desc:"हिंदी और English की सभी कहानियाँ — लेखक, सारांश, पात्र, सीख।", color:"#ea580c", page:"stories.html" },
+  { icon:"🕰️", title:"इतिहास की तारीखें", desc:"कब क्या हुआ — पूरी Timeline: क्रांति, आंदोलन, युद्ध, घटनाएँ साल के साथ।", color:"#e11d48", page:"history.html" },
+  { icon:"📄", title:"PDF रिवीज़न", desc:"18 PDF बैंक व उत्तर-कुंजियाँ — यहीं website पर open करके पढ़ो।", color:"#0891b2", page:"pdf.html" },
+  { icon:"📊", title:"मेरा रिज़ल्ट", desc:"क्विज़ के बाद स्कोर, weak अध्याय और सुझाव — पूरा विश्लेषण।", color:"#7048e8", page:"analysis.html" }
+];
+
+function renderHome() {
+  const grid = document.getElementById('homeGrid');
+  grid.innerHTML = HOME_FEATURES.map(f => `
+    <div class="feature-card" style="border-top-color:${f.color}" onclick="location.href='${f.page}'">
+      <div class="fc-icon">${f.icon}</div>
+      <h3>${f.title}</h3>
+      <p>${f.desc}</p>
+      <div class="fc-go">खोलें →</div>
+    </div>`).join('');
+  renderSubjectCards('subjectsGrid', 'subjects.html');
+  animateValue(document.getElementById('statStudents'), 15000, '+');
+}
+
+document.addEventListener('DOMContentLoaded', () => { renderHome(); });
+</script>
+<script src="js/lang.js"></script>
+</body>
+</html>

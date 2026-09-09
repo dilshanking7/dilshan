@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>गणित लैब (Math Lab) — JAC 10th Study Hub</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<header class="navbar" id="siteHeader"></header>
+
+<div class="page-hero hero-math">
+  <h1 data-i18n="pm_title">📐 गणित लैब (Math Lab)</h1>
+  <p data-i18n="pm_desc">ग्राफ़ बनाओ, x निकालो, d निकालो — सारे फ़ॉर्मूले, चरण-दर-चरण हल</p>
+</div>
+
+<section class="section">
+  <div class="container">
+    <div class="card ml-card">
+      <h2 data-i18n="mm_graph">📈 आधुनिक ग्राफ़ बनाओ (Live Graph)</h2>
+      <p class="hint">समीकरण टाइप करते ही ग्राफ़ <b>अपने-आप बनता</b> है — जैसे <b>x^2-5x+6</b>, <b>2x+3</b>, <b>sin(x)</b>, <b>x^3-6x^2+11x-6</b></p>
+      <div class="ml-live">
+        <div class="ml-side">
+          <label class="ml-lbl" for="graphExpr">समीकरण (Equation)<span class="ml-livebadge">LIVE</span></label>
+          <input id="graphExpr" class="ml-big" placeholder="f(x) लिखो — जैसे x^2-5x+6" value="x^2-5x+6" autocomplete="off" spellcheck="false">
+          <div class="ml-range-row">
+            <label><span>x min</span><input id="graphMin" class="ml-num" placeholder="x min" value="-10"></label>
+            <label><span>x max</span><input id="graphMax" class="ml-num" placeholder="x max" value="10"></label>
+          </div>
+          <div class="ml-opts">
+            <label class="ml-chk"><input type="checkbox" id="graphFill" checked> क्षेत्रफल भरें</label>
+            <label class="ml-chk"><input type="checkbox" id="graphAnim" checked> एनीमेशन</label>
+          </div>
+          <button class="btn ml-reload" onclick="runGraph()">⟳ ग्राफ़ ताज़ा करो</button>
+          <div id="graphErr" class="ml-errbox"></div>
+        </div>
+        <div class="ml-graphcol">
+          <svg id="graphSvg" class="ml-curve ml-curve-dark" viewBox="0 0 640 400" xmlns="http://www.w3.org/2000/svg"></svg>
+          <div id="mlExamples" class="ml-chips"></div>
+          <div id="graphInfo" class="ml-info"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section">
+  <div class="container">
+    <div class="card ml-card">
+      <h2 data-i18n="mm_solve">🔢 x निकालो (Equation Solver)</h2>
+      <p class="hint">जैसे: <b>5x+2=17</b>, <b>x^2-5x+6=0</b>, <b>x^3-4x=0</b> — चरण-दर-चरण हल + ग्राफ़</p>
+      <div class="ml-row">
+        <input id="eqInput" class="ml-big-row" placeholder="समीकरण लिखें, जैसे x^2-5x+6=0" value="x^2-5x+6=0">
+        <button class="btn" onclick="runSolve()">x निकालो</button>
+      </div>
+      <div id="eqExamples" class="ml-chips"></div>
+      <svg id="eqSvg" class="ml-curve" viewBox="0 0 640 400" xmlns="http://www.w3.org/2000/svg"></svg>
+      <div id="eqSvgInfo" class="ml-info"></div>
+      <div id="eqOut"></div>
+    </div>
+  </div>
+</section>
+
+<section class="section">
+  <div class="container">
+    <div class="card ml-card">
+      <h2 data-i18n="mm_deriv">🧮 d/dx निकालो (Derivative Calculator)</h2>
+      <p class="hint">जैसे: <b>3x^2+2x-5</b>, <b>sin(x)</b>, <b>x^3-4x</b> — डेरिवेटिव + किसी x पर मान</p>
+      <div class="ml-row">
+        <input id="derivInput" class="ml-big-row" placeholder="फलन लिखें, जैसे 3x^2+2x-5" value="x^2+x+1">
+        <input id="derivX" class="ml-num" placeholder="x = ?" value="2">
+        <button class="btn" onclick="runDerivative()">d निकालो</button>
+      </div>
+      <div id="derivExamples" class="ml-chips"></div>
+      <div id="derivOut"></div>
+    </div>
+  </div>
+</section>
+
+<section class="section">
+  <div class="container">
+    <div class="card ml-card">
+      <h2 data-i18n="mm_ap">➕ समांतर श्रेणी (Arithmetic Progression)</h2>
+      <div class="ml-row">
+        <input id="apA" class="ml-num" placeholder="a₁ (पहला पद)" value="2">
+        <input id="apD" class="ml-num" placeholder="d (अंतर)" value="3">
+        <input id="apN" class="ml-num" placeholder="n (पद संख्या)" value="5">
+        <button class="btn" onclick="runAP('apOut')">aₙ और Sₙ</button>
+      </div>
+      <div id="apOut"></div>
+    </div>
+  </div>
+</section>
+
+<section class="section">
+  <div class="container">
+    <div class="card ml-card">
+      <h2 data-i18n="mm_coord">📍 निर्देशांक ज्यामिति (Coordinate Geometry)</h2>
+      <div class="ml-row">
+        <input id="cX1" class="ml-num" placeholder="x₁" value="0">
+        <input id="cY1" class="ml-num" placeholder="y₁" value="0">
+        <input id="cX2" class="ml-num" placeholder="x₂" value="3">
+        <input id="cY2" class="ml-num" placeholder="y₂" value="4">
+        <button class="btn" onclick="runCoord('cOut')">दूरी/मध्यबिंदु</button>
+      </div>
+      <p class="hint">अंत:विभाजन के लिए m₁ : m₂ भी भर सकते हैं।</p>
+      <div class="ml-row">
+        <input id="cM1" class="ml-num" placeholder="m₁ (वैकल्पिक)" value="">
+        <input id="cM2" class="ml-num" placeholder="m₂ (वैकल्पिक)" value="">
+      </div>
+      <div id="cOut"></div>
+    </div>
+  </div>
+</section>
+
+<footer class="footer">
+  <p>🎓 JAC Board Class 10 Study Hub | NCERT Based</p>
+</footer>
+
+<script src="js/common.js"></script>
+<script src="js/mathlab.js"></script>
+<script src="js/lang.js"></script>
+</body>
+</html>

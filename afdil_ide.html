@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AFDIL Real-AI Engine v7.0 Pro</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', system-ui, sans-serif; }
+        body { display: flex; height: 100vh; background: #0f172a; color: #fff; overflow: hidden; }
+        
+        #left-panel { width: 38%; display: flex; flex-direction: column; background: #1e293b; border-right: 2px solid #334155; }
+        .header { padding: 12px; background: #0f172a; font-weight: bold; color: #38bdf8; font-size: 14px; display: flex; justify-content: space-between; border-bottom: 1px solid #334155; }
+        
+        textarea { flex: 1; width: 100%; padding: 15px; background: #0f172a; color: #f8fafc; border: none; font-family: 'Fira Code', monospace; font-size: 13px; resize: none; outline: none; line-height: 1.5; }
+        
+        .action-bar { padding: 10px; background: #1e293b; display: flex; gap: 8px; border-top: 1px solid #334155; }
+        .btn { border: none; padding: 10px 14px; font-weight: 600; cursor: pointer; border-radius: 6px; flex: 1; transition: 0.2s; font-size: 13px; }
+        .btn-deploy { background: #22c55e; color: white; }
+        .btn-deploy:hover { background: #16a34a; }
+        
+        #right-panel { width: 62%; display: flex; flex-direction: column; background: #f8fafc; }
+        #nav-bar { background: #e2e8f0; color: #334155; padding: 8px 12px; font-size: 12px; font-weight: bold; display: flex; gap: 8px; align-items: center; border-bottom: 1px solid #cbd5e1; }
+        .page-btn { background: #cbd5e1; padding: 5px 12px; border: none; cursor: pointer; font-weight: 600; color: #475569; border-radius: 4px; }
+        .page-btn.active { background: #0284c7; color: #fff; }
+        
+        #web-screen { flex: 1; position: relative; background: white; overflow: auto; }
+        .afdil-el { position: absolute; transition: all 0.1s ease-out; }
+        
+        /* Modern Inputs & Buttons */
+        .afdil-input { padding: 10px 14px; border: 1.5px solid #cbd5e1; border-radius: 8px; background: #fff; color: #0f172a; outline: none; font-size: 14px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
+        .afdil-input:focus { border-color: #0284c7; box-shadow: 0 0 0 3px rgba(2,132,199,0.15); }
+        .afdil-btn { border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 14px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+
+        /* Full Voice AI Window Component */
+        .chat-box-view { display: flex; flex-direction: column; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.1); }
+        .chat-messages { flex: 1; padding: 16px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; font-size: 14px; }
+        .msg { padding: 10px 14px; border-radius: 12px; max-width: 80%; line-height: 1.4; }
+        .msg.user { background: #0284c7; color: white; align-self: flex-end; border-bottom-right-radius: 2px; }
+        .msg.ai { background: #f1f5f9; color: #0f172a; align-self: flex-start; border-bottom-left-radius: 2px; }
+        .chat-input-area { display: flex; border-top: 1px solid #e2e8f0; padding: 8px; background: #fff; gap: 6px; }
+        .chat-input-area input { flex: 1; padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px; outline: none; }
+        .chat-input-area button { background: #0284c7; color: white; border: none; padding: 0 16px; border-radius: 6px; cursor: pointer; font-weight: 600; }
+    </style>
+</head>
+<body>
+
+    <div id="left-panel">
+        <div class="header">
+            <span>⚡ AFDIL IDE v7.0 Pro</span>
+            <span style="font-size: 11px; color: #38bdf8;">Real Voice & AI Engine</span>
+        </div>
+        
+        <textarea id="code-input" oninput="compileAfdil()"></textarea>
+        
+        <div class="action-bar">
+            <button class="btn btn-deploy" onclick="deployProject()">🚀 Browser Me Deploy/Download Karein</button>
+        </div>
+    </div>
+
+    <div id="right-panel">
+        <div id="nav-bar">
+            <span>🌐 PAGE PREVIEW:</span>
+            <div id="page-tabs"></div>
+        </div>
+        <div id="web-screen"></div>
+    </div>
+
+    <script>
+        let pagesData = {}, currentPage = "home";
+        let speechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        let recognizer = speechRecognition ? new speechRecognition() : null;
+
+        if (recognizer) {
+            recognizer.lang = 'hi-IN';
+            recognizer.continuous = false;
+        }
+
+        // 1. ADVANCED COMPILER ENGINE
+        function compileAfdil() {
+            const code = document.getElementById('code-input').value;
+            const lines = code.split('\n');
+            pagesData = {};
+            let activePage = "home";
+
+            lines.forEach((line) => {
+                let clean = line.trim();
+                if(!clean || clean.startsWith('#') || clean.startsWith('//')) return;
+                
+                let parts = clean.split('&').map(p => p.trim());
+                let commandStr = parts[0];
+                let props = {};
+                
+                parts.forEach(p => { 
+                    if(p.includes('=')) { 
+                        let s = p.split('='); 
+                        props[s[0].trim()] = s.slice(1).join('=').trim().replace(/"/g, ''); 
+                    } 
+                });
+
+                if(commandStr.startsWith('banao page') || commandStr.startsWith('build page')) {
+                    activePage = props['banao page'] || props['page'] || "home";
+                    pagesData[activePage] = { style: props, elements: [] };
+                } else if(commandStr.startsWith('banao') || commandStr.startsWith('build')) {
+                    let words = commandStr.split(' ');
+                    props['type'] = words[1] || 'box';
+                    if(!pagesData[activePage]) pagesData[activePage] = { style: {}, elements: [] };
+                    pagesData[activePage].elements.push(props);
+                }
+            });
+
+            const tabs = document.getElementById('page-tabs'); 
+            tabs.innerHTML = '';
+            let keys = Object.keys(pagesData); 
+            if(keys.length === 0) { pagesData["home"] = { style:{}, elements:[] }; keys = ["home"]; }
+            
+            keys.forEach(k => {
+                let b = document.createElement('button'); 
+                b.className = `page-btn ${k===currentPage?'active':''}`; 
+                b.innerText = k.toUpperCase();
+                b.onclick = () => { currentPage = k; compileAfdil(); }; 
+                tabs.appendChild(b);
+            });
+
+            if(!pagesData[currentPage]) currentPage = keys[0];
+            renderPage();
+        }
+
+        // 2. DYNAMIC RENDER ENGINE (Free Custom CSS & Shapes)
+        function renderPage() {
+            const screen = document.getElementById('web-screen'); 
+            screen.innerHTML = '';
+            if(!pagesData[currentPage]) return;
+
+            let info = pagesData[currentPage]; 
+            screen.style.backgroundColor = info.style['color'] || 'white';
+
+            info.elements.forEach(el => {
+                let dom;
+                let t = (el.top !== undefined) ? el.top + 'px' : '0px';
+                let l = (el.left !== undefined) ? el.left + 'px' : '0px';
+                let w = (el.width !== undefined) ? el.width + 'px' : 'auto';
+                let h = (el.height !== undefined) ? el.height + 'px' : 'auto';
+
+                if(el.type === 'headline') {
+                    dom = document.createElement('h1'); 
+                    dom.innerText = el.text || ''; 
+                    dom.style.fontSize = (el.size || 24) + 'px'; 
+                    dom.style.color = el.color || '#0f172a';
+                } 
+                else if(el.type === 'input_box') {
+                    dom = document.createElement('input'); 
+                    dom.className = 'afdil-input'; 
+                    dom.id = el.id || 'input-field';
+                    dom.placeholder = el.text || 'Type here...'; 
+                    dom.type = el.input_type || 'text'; 
+                } 
+                else if(el.type === 'box') {
+                    dom = document.createElement('button'); 
+                    dom.className = 'afdil-btn'; 
+                    dom.innerText = el.text || ''; 
+                    dom.style.background = el.color || '#0284c7';
+                    dom.style.color = el.text_color || 'white'; 
+                    
+                    // Customizable Shapes Logic
+                    if(el.shape === 'rounded') dom.style.borderRadius = '8px'; 
+                    else if(el.shape === 'round' || el.shape === 'circle') dom.style.borderRadius = '50%';
+                    else if(el.shape === 'pill') dom.style.borderRadius = '50px';
+                    else if(el.radius) dom.style.borderRadius = el.radius + 'px';
+
+                    // Voice Command Action Engine
+                    if(el.icon === 'mic' || el.action === 'voice') {
+                        dom.onclick = startVoiceListening;
+                    } else if(el.redirect) {
+                        dom.onclick = () => {
+                            if(el.require_login === "yes") {
+                                let email = document.getElementById('user-email')?.value.trim();
+                                let pass = document.getElementById('user-pass')?.value.trim();
+                                if(!email || !pass) { alert("Security Alert: Kripya pehle Email aur Password dalein!"); return; }
+                            }
+                            currentPage = el.redirect; 
+                            compileAfdil();
+                        };
+                    }
+                    if(el.link) dom.onclick = () => window.open(el.link, '_blank');
+                } 
+                else if(el.type === 'ai_chat_box') {
+                    dom = document.createElement('div'); 
+                    dom.className = 'chat-box-view'; 
+                    dom.innerHTML = `
+                        <div style="background:#0f172a;color:#38bdf8;padding:12px;font-size:14px;font-weight:bold;display:flex;justify-between;align-items:center;">
+                            🤖 AFDIL Real Voice AI Assistant
+                        </div>
+                        <div class="chat-messages" id="box-msgs">
+                            <div class="msg ai">Namaste! Main AFDIL Real AI Hoon. Aap Bol Kar Ya Type Kar Ke Baat Kar Sakte Hain.</div>
+                        </div>
+                        <div class="chat-input-area">
+                            <input type="text" id="ai-in" placeholder="Ask AI anything...">
+                            <button onclick="sendChatMessage()">Send</button>
+                            <button onclick="startVoiceListening()" style="background:#ef4444;">🎙️ Mic</button>
+                        </div>`;
+                }
+
+                if(dom) { 
+                    dom.classList.add('afdil-el'); 
+                    dom.style.top = t; dom.style.left = l; 
+                    dom.style.width = w; dom.style.height = h;
+                    
+                    // Custom CSS Free Overrides
+                    if(el.border) dom.style.border = el.border;
+                    if(el.shadow) dom.style.boxShadow = el.shadow;
+                    
+                    screen.appendChild(dom); 
+                }
+            });
+        }
+
+        // 3. REAL VOICE RECOGNITION & SPEAK ENGINE
+        function startVoiceListening() {
+            if(!recognizer) { alert("Aapka browser Voice Input support nahi karta."); return; }
+            const msgs = document.getElementById('box-msgs');
+            if(msgs) msgs.innerHTML += `<div class="msg ai" style="color:#0284c7;">🎙️ Sun raha hoon... Boliye!</div>`;
+            recognizer.start();
+
+            recognizer.onresult = (event) => {
+                let speechResult = event.results[0][0].transcript;
+                let inputField = document.getElementById('ai-in');
+                if(inputField) inputField.value = speechResult;
+                sendChatMessage(speechResult);
+            };
+        }
+
+        function speakAI(text) {
+            if ('speechSynthesis' in window) {
+                let utterance = new SpeechSynthesisUtterance(text);
+                utterance.lang = 'hi-IN';
+                window.speechSynthesis.speak(utterance);
+            }
+        }
+
+        function sendChatMessage(overrideText) {
+            const inp = document.getElementById('ai-in'); 
+            const box = document.getElementById('box-msgs'); 
+            let q = overrideText || (inp ? inp.value.trim() : ""); 
+            if(!q) return;
+
+            if(box) box.innerHTML += `<div class="msg user">${q}</div>`; 
+            if(inp) inp.value = '';
+
+            // Real Smart Response Simulation Engine
+            let reply = "Afdil AI: Main aapka command samajh gaya hoon.";
+            let lowerQ = q.toLowerCase();
+
+            if(lowerQ.includes("hello") || lowerQ.includes("namaste")) {
+                reply = "Namaste! Main AFDIL AI hoon, bataiye main aapki kya madad karoon?";
+            } else if(lowerQ.includes("kaun ho") || lowerQ.includes("who are you")) {
+                reply = "Main AFDIL Real AI Assistant hoon, jise aapne banaya hai!";
+            } else if(lowerQ.includes("time") || lowerQ.includes("samay")) {
+                reply = "Abhi ka samay hai: " + new Date().toLocaleTimeString();
+            }
+
+            setTimeout(() => { 
+                if(box) {
+                    box.innerHTML += `<div class="msg ai">${reply}</div>`; 
+                    box.scrollTop = box.scrollHeight; 
+                }
+                speakAI(reply);
+            }, 500);
+        }
+
+        // 4. DEPLOY / DOWNLOAD ENGINE
+        function deployProject() {
+            const afdilCode = document.getElementById('code-input').value;
+            const fullHTML = `<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>AFDIL Live App</title>
+    <style>
+        body { margin:0; font-family:sans-serif; background:#f8fafc; }
+        .afdil-el { position: absolute; }
+        .afdil-btn { border:none; cursor:pointer; display:flex; align-items:center; justify-content:center; font-weight:600; }
+        .afdil-input { padding:10px; border:1px solid #ccc; border-radius:8px; }
+        .chat-box-view { display:flex; flex-direction:column; background:#fff; border-radius:12px; border:1px solid #ccc; overflow:hidden; }
+        .chat-messages { flex:1; padding:10px; overflow-y:auto; display:flex; flex-direction:column; gap:8px; }
+        .msg { padding:8px 12px; border-radius:10px; max-width:80%; }
+        .msg.user { background:#0284c7; color:#fff; align-self:flex-end; }
+        .msg.ai { background:#f1f5f9; color:#000; align-self:flex-start; }
+        .chat-input-area { display:flex; padding:5px; border-top:1px solid #ccc; }
+        .chat-input-area input { flex:1; padding:8px; }
+    </style>
+</head>
+<body>
+    <div id="web-screen" style="width:100vw; height:100vh; position:relative;"></div>
+    <script>
+        const rawCode = \`${afdilCode.replace(/`/g, '\\`')}\`;
+        ${compileAfdil.toString()}
+        ${renderPage.toString()}
+        ${startVoiceListening.toString()}
+        ${speakAI.toString()}
+        ${sendChatMessage.toString()}
+        window.onload = () => {
+            document.getElementById('code-input') = { value: rawCode };
+            compileAfdil();
+        };
+    <\/script>
+</body>
+</html>`;
+
+            const blob = new Blob([fullHTML], { type: 'text/html' });
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = "index.html";
+            a.click();
+        }
+
+        // Set Initial Refined Code
+        window.onload = () => {
+            document.getElementById('code-input').value = `# Professional Login & Voice AI App
+banao page = home & color = "#f8fafc"
+banao headline & text = "Welcome to AFDIL AI" & color = "#0f172a" & top = 50 & left = 220 & size = 42
+
+banao input_box & id = "user-email" & text = "Enter Email Address" & top = 160 & left = 280 & width = 340 & height = 45
+banao input_box & id = "user-pass" & text = "Enter Password" & input_type = "password" & top = 225 & left = 280 & width = 340 & height = 45
+
+banao box & text = "Login Now" & color = "#0284c7" & shape = "pill" & top = 295 & left = 370 & width = 160 & height = 45 & redirect = "dashboard" & require_login = "yes"
+
+banao page = dashboard & color = "#f1f5f9"
+banao headline & text = "AFDIL AI Voice Workspace" & color = "#0369a1" & top = 20 & left = 40 & size = 28
+banao ai_chat_box & top = 70 & left = 40 & width = 820 & height = 520
+
+banao box & icon = "mic" & left = 740 & top = 535 & text = "🎙️ Voice Mic" & color = "#ef4444" & shape = "pill" & width = 110 & height = 35`;
+            compileAfdil();
+        };
+    </script>
+</body>
+</html>
