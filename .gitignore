@@ -19,3 +19,9 @@ Desktop.ini
 # ---------- editors ----------
 .vscode/
 .idea/
+
+# ---------- root draft files (not part of class10 project) ----------
+/index.html
+/afdil_ide.html
+/afdil_sec.py
+/Swatantrata_Diwas_Anchoring_Script(2).pdf
