@@ -1,0 +1,21 @@
+# ---------- Python build artifacts ----------
+__pycache__/
+*.py[cod]
+*.pyo
+
+# ---------- draft / misc media (not part of the site) ----------
+ChatGPT Image *.png
+Screenshot *.png
+Screenshot *.jpg
+download.jpg
+*.webm
+*.afsec
+
+# ---------- OS ----------
+Thumbs.db
+.DS_Store
+Desktop.ini
+
+# ---------- editors ----------
+.vscode/
+.idea/
