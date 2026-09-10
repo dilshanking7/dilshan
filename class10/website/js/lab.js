@@ -618,6 +618,237 @@ function mixEltSalt(e, saltId) {
   return { eq:mixEltSaltEq(e.s, spec, v), type:'विस्थापन अभिक्रिया', obs:e.n + ' ' + spec.metName + ' से अधिक क्रियाशील है — लवण से ' + spec.metName + ' विस्थापित। ' + spec.obs, sol:'#e0f2fe', gas:false, precip:spec.prec, heat:false };
 }
 
+// ============================================================
+//  CHEM × CHEM inference engine — कोई भी दो पदार्थ, समीकरण + प्रकार
+// ============================================================
+const CH_ION_INFO = {
+  hcl:     { id:'hcl',     f:'HCl',       cat:'H',   cChg:1, an:'Cl',        aChg:1, kind:'acid' },
+  h2so4:   { id:'h2so4',   f:'H₂SO₄',     cat:'H',   cChg:1, an:'SO₄',       aChg:2, kind:'acid' },
+  hno3:    { id:'hno3',    f:'HNO₃',      cat:'H',   cChg:1, an:'NO₃',       aChg:1, kind:'acid' },
+  ch3cooh: { id:'ch3cooh', f:'CH₃COOH',   cat:'H',   cChg:1, an:'CH₃COO',    aChg:1, kind:'acid' },
+  naoh:    { id:'naoh',    f:'NaOH',      cat:'Na',  cChg:1, an:'OH',        aChg:1, kind:'base' },
+  koh:     { id:'koh',     f:'KOH',       cat:'K',   cChg:1, an:'OH',        aChg:1, kind:'base' },
+  cuso4:   { id:'cuso4',   f:'CuSO₄',     cat:'Cu',  cChg:2, an:'SO₄',       aChg:2, kind:'salt' },
+  feso4:   { id:'feso4',   f:'FeSO₄',     cat:'Fe',  cChg:2, an:'SO₄',       aChg:2, kind:'salt' },
+  fecl3:   { id:'fecl3',   f:'FeCl₃',     cat:'Fe',  cChg:3, an:'Cl',        aChg:1, kind:'salt' },
+  agno3:   { id:'agno3',   f:'AgNO₃',     cat:'Ag',  cChg:1, an:'NO₃',       aChg:1, kind:'salt' },
+  pbno3:   { id:'pbno3',   f:'Pb(NO₃)₂',  cat:'Pb',  cChg:2, an:'NO₃',       aChg:1, kind:'salt' },
+  cacl2:   { id:'cacl2',   f:'CaCl₂',     cat:'Ca',  cChg:2, an:'Cl',        aChg:1, kind:'salt' },
+  bacl2:   { id:'bacl2',   f:'BaCl₂',     cat:'Ba',  cChg:2, an:'Cl',        aChg:1, kind:'salt' },
+  nacl:    { id:'nacl',    f:'NaCl',      cat:'Na',  cChg:1, an:'Cl',        aChg:1, kind:'salt' },
+  ki:      { id:'ki',      f:'KI',        cat:'K',   cChg:1, an:'I',         aChg:1, kind:'salt' },
+  na2so4:  { id:'na2so4',  f:'Na₂SO₄',    cat:'Na',  cChg:1, an:'SO₄',       aChg:2, kind:'salt' },
+  na2co3:  { id:'na2co3',  f:'Na₂CO₃',    cat:'Na',  cChg:1, an:'CO₃',       aChg:2, kind:'carbonate' },
+  nahco3:  { id:'nahco3',  f:'NaHCO₃',    cat:'Na',  cChg:1, an:'HCO₃',      aChg:1, kind:'carbonate' },
+  caco3:   { id:'caco3',   f:'CaCO₃',     cat:'Ca',  cChg:2, an:'CO₃',       aChg:2, kind:'carbonate' },
+  kmno4:   { id:'kmno4',   f:'KMnO₄',     cat:'K',   cChg:1, an:'MnO₄',      aChg:1, kind:'oxidizer' },
+  h2o:     { id:'h2o',     f:'H₂O',       kind:'water' },
+  h2o2:    { id:'h2o2',    f:'H₂O₂',      kind:'peroxide' },
+  zn:      { id:'zn',      f:'Zn',        cat:'Zn',  cChg:2, kind:'metal' },
+  fe:      { id:'fe',      f:'Fe',        cat:'Fe',  cChg:2, kind:'metal' },
+  mg:      { id:'mg',      f:'Mg',        cat:'Mg',  cChg:2, kind:'metal' },
+  al:      { id:'al',      f:'Al',        cat:'Al',  cChg:3, kind:'metal' },
+  cu:      { id:'cu',      f:'Cu',        cat:'Cu',  cChg:2, kind:'metal' },
+  ca:      { id:'ca',      f:'CaO',       cat:'Ca',  cChg:2, an:'O',         aChg:2, kind:'metaloxide' },
+  soap:    { id:'soap',    f:'C₁₇H₃₅COONa', cat:'Na', cChg:1, an:'C₁₇H₃₅COO', aChg:1, kind:'salt' }
+};
+
+const CH_POLY = { 'SO₄':1,'NO₃':1,'CO₃':1,'HCO₃':1,'OH':1,'CH₃COO':1,'MnO₄':1,'C₁₇H₃₅COO':1 };
+const CH_REACT_RANK = { K:10,Na:9,Ca:8,Mg:7,Al:6,Zn:6,Fe:5,Ni:5,Co:5,Sn:4,Pb:4,Cd:4,Cu:3,Hg:2,Ag:2,Au:1,Pt:1 };
+const CH_BELOW_H = { Cu:true,Hg:true,Ag:true,Au:true,Pt:true };
+
+function chGcd(x, y) { x = Math.abs(x); y = Math.abs(y); while (y) { const t = y; y = x % y; x = t; } return x; }
+function chSub(n) { return String(n).split('').map(d => '₀₁₂₃₄₅₆₇₈₉'[+d]).join(''); }
+
+// cation cChg/charge + anion aChg → न्यूनतम सूत्र, जैसे Fe³⁺+SO₄²⁻ → Fe₂(SO₄)₃
+function chFormula(cat, cChg, an, aChg) {
+  const g = chGcd(cChg, aChg);
+  const ca = aChg / g, aa = cChg / g;
+  let s = cat;
+  if (ca > 1) s += chSub(ca);
+  if (aa > 1 && CH_POLY[an]) s += '(' + an + ')' + chSub(aa);
+  else if (aa > 1) s += an + chSub(aa);
+  else s += an;
+  return s;
+}
+
+function chName(id) { const c = CHEMICALS[id]; return c ? c.name : id; }
+function mixIonInfo(id) { return CH_ION_INFO[id] || null; }
+
+function chBalanceEq(lhsForms, rhsForms) {
+  if (typeof computeBalancing === 'function') {
+    try {
+      const sol = computeBalancing(lhsForms, rhsForms);
+      if (sol && sol.coeffs) {
+        const c = sol.coeffs;
+        const build = (arr, off) => arr.map((f, i) => ({ f, k: c[off + i] }))
+          .filter(x => x.k > 0)
+          .map(x => (x.k === 1 ? '' : x.k) + x.f).join(' + ');
+        return build(lhsForms, 0) + ' → ' + build(rhsForms, lhsForms.length);
+      }
+    } catch (e) {}
+  }
+  return lhsForms.join(' + ') + ' → ' + rhsForms.join(' + ');
+}
+
+// घुलनशीलता नियम (class-10): सभी नाइट्रेट/एसीटेट/NH₄⁺/क्षारीय लवण घुलनशील
+function chInsoluble(cat, an) {
+  if (cat === 'Na' || cat === 'K') return false;
+  if (an === 'NO₃' || an === 'CH₃COO') return false;
+  if (an === 'C₁₇H₃₅COO') return true; // साबुन की गंदी मैल (स्टीयरेट अवक्षेप)
+  if (an === 'Cl' || an === 'I') return (cat === 'Ag' || cat === 'Pb' || cat === 'Hg');
+  if (an === 'SO₄') return (cat === 'Ba' || cat === 'Pb' || cat === 'Sr' || cat === 'Ca');
+  if (an === 'CO₃' || an === 'HCO₃' || an === 'O' || an === 'OH') return true;
+  return false;
+}
+
+function chPrecipInfo(cat, an) {
+  if (!chInsoluble(cat, an)) return '';
+  const alw = { Na:1, K:1 };
+  if (an === 'OH') {
+    if (cat === 'Cu') return 'नीला अवक्षेप Cu(OH)₂';
+    if (cat === 'Fe') return 'गंदा-हरा → भूरा अवक्षेप Fe(OH)₃';
+    if (cat === 'Al') return 'सफ़ेद जिलेटिनी अवक्षेप Al(OH)₃';
+    if (cat === 'Zn') return 'सफ़ेद अवक्षेप Zn(OH)₂';
+    if (cat === 'Pb') return 'सफ़ेद अवक्षेप Pb(OH)₂';
+    if (cat === 'Ca') return 'सफ़ेद चूने जैसा अवक्षेप Ca(OH)₂';
+    if (cat === 'Mg') return 'सफ़ेद अवक्षेप Mg(OH)₂';
+    return 'सफ़ेद अवक्षेप ' + cat + '(OH)₂';
+  }
+  if (an === 'CO₃') {
+    if (cat === 'Cu') return 'हरा-नीला अवक्षेप CuCO₃';
+    if (cat === 'Fe') return 'हरा अवक्षेप FeCO₃';
+    if (cat === 'Ca') return 'दूधिया-सफ़ेद अवक्षेप CaCO₃';
+    if (cat === 'Ba') return 'सफ़ेद अवक्षेप BaCO₃';
+    if (cat === 'Pb') return 'सफ़ेद अवक्षेप PbCO₃';
+    if (cat === 'Zn') return 'सफ़ेद अवक्षेप ZnCO₃';
+    return 'सफ़ेद अवक्षेप ' + cat + 'CO₃';
+  }
+  if (an === 'C₁₇H₃₅COO') {
+    if (cat === 'Ca' || cat === 'Mg') return 'सफ़ेद गंदा स्कम/मैल (कैल्शियम स्टीयरेट)';
+    return 'सफ़ेद मैल (धातु स्टीयरेट)';
+  }
+  const pair = cat + an;
+  if (pair === 'AgCl') return 'सफ़ेद दही-जैसा अवक्षेप AgCl';
+  if (pair === 'PbCl₂') return 'सफ़ेद अवक्षेप PbCl₂';
+  if (pair === 'AgI') return 'पीला-क्रीम अवक्षेप AgI';
+  if (pair === 'PbI₂') return 'चमकीला पीला अवक्षेप PbI₂ (golden rain)';
+  if (pair === 'BaSO₄') return 'सफ़ेद अवक्षेप BaSO₄ (अम्ल में भी नहीं घुलता)';
+  if (pair === 'PbSO₄') return 'सफ़ेद अवक्षेप PbSO₄';
+  if (pair === 'CaSO₄') return 'हल्का-सफ़ेद अवक्षेप CaSO₄';
+  if (pair === 'CaO') return 'सफ़ेद अवक्षेप CaO';
+  return 'अवक्षेप (' + cat + an + ')';
+}
+
+// कोई भी दो रसायन → { eq, type, obs, sol, gas, precip, heat } या null
+function mixInferChemChem(idA, idB) {
+  const A = mixIonInfo(idA), B = mixIonInfo(idB);
+  if (!A || !B) return null;
+  const nA = chName(idA), nB = chName(idB);
+
+  // --- H₂O₂ अपघटन (धातु/संक्रमण-लवण उत्प्रेरक) ---
+  if (A.kind === 'peroxide' || B.kind === 'peroxide') {
+    const other = A.kind === 'peroxide' ? B : A;
+    if (other.kind === 'metal' || (other.kind === 'salt' && (other.cat === 'Cu' || other.cat === 'Fe'))) {
+      const eq = '2H₂O₂ → 2H₂O + O₂↑';
+      return { eq, type:'अपघटन अभिक्रिया (उत्प्रेरक)', obs:nB + ' / ' + nA + ' की उपस्थिति में H₂O₂ तेज़ी से टूटता है — ऑक्सीजन गैस के बुलबुलों की फुहार। जलती तीली और तेज़ जलती है (O₂ की पहचान)।', sol:'#cffafe', gas:true, precip:false, heat:false };
+    }
+    return null; // kmno4+ hcl/h2o2 table में हैं
+  }
+  if (A.kind === 'oxidizer' || B.kind === 'oxidizer') return null;
+
+  // --- जल में घुलना (विलयन) — अम्ल/क्षारक/लवण + पानी ---
+  if (A.kind === 'water' || B.kind === 'water') {
+    const sol = A.kind === 'water' ? B : A;
+    if (sol.kind === 'acid' || sol.kind === 'base' || sol.kind === 'salt') {
+      const hot = (sol.kind === 'acid' || (sol.kind === 'base'));
+      return { eq: sol.f + ' + H₂O → ' + sol.f + '(aq)', type:'विलयन (भौतिक परिवर्तन)', obs:sol.name ? sol.name + ' जल में घुलकर विलयन बना।' : nA + ' / ' + nB + ' जल में घुल गया — रंग/अवस्था बदली, पर कोई नया पदार्थ नहीं बना।', sol:'#e0f2fe', gas:false, precip:false, heat:hot, skipBal:true };
+    }
+    return null;
+  }
+
+  // --- अम्ल + क्षारक → लवण + जल (उदासीनीकरण) ---
+  if ((A.kind === 'acid' && B.kind === 'base') || (A.kind === 'base' && B.kind === 'acid')) {
+    const ac = A.kind === 'acid' ? A : B, ba = B.kind === 'base' ? B : A;
+    const salt = chFormula(ba.cat, ba.cChg, ac.an, ac.aChg);
+    const eq = chBalanceEq([ba.f, ac.f], [salt, 'H₂O']);
+    return { eq, type:'उदासीनीकरण अभिक्रिया', obs:nA + ' + ' + nB + ' → लवण + जल। घोल उदासीन (pH 7) — हल्की गर्मी भी निकलती है।', sol:'#e2e8f0', gas:false, precip:false, heat:true };
+  }
+
+  // --- अम्ल + कार्बोनेट/हाइड्रोजन कार्बोनेट → लवण + CO₂ + जल ---
+  if ((A.kind === 'acid' && B.kind === 'carbonate') || (A.kind === 'carbonate' && B.kind === 'acid')) {
+    const ac = A.kind === 'acid' ? A : B, cb = B.kind === 'carbonate' ? B : A;
+    const salt = chFormula(cb.cat, cb.cChg, ac.an, ac.aChg);
+    const eq = chBalanceEq([cb.f, ac.f], [salt, 'CO₂↑', 'H₂O']);
+    return { eq, type:'अम्ल + कार्बोनेट → लवण + CO₂ + जल', obs:'कार्बोनेट/बेकिंग सोडा पर अम्ल डालते ही तेज़ फ़िज़-फ़िज़ — कार्बन डाइऑक्साइड गैस के बुलबुले उठे। गैस को चूना-जल में डालो — दूधिया सफ़ेद होगा (CO₂ की पहचान)।', sol:'#e0f2fe', gas:true, precip:false, heat:false };
+  }
+
+  // --- अम्ल + धातु ऑक्साइड → लवण + जल ---
+  if ((A.kind === 'acid' && B.kind === 'metaloxide') || (A.kind === 'metaloxide' && B.kind === 'acid')) {
+    const ac = A.kind === 'acid' ? A : B, mo = B.kind === 'metaloxide' ? B : A;
+    const salt = chFormula(mo.cat, mo.cChg, ac.an, ac.aChg);
+    const eq = chBalanceEq([mo.f, ac.f], [salt, 'H₂O']);
+    return { eq, type:'धातु ऑक्साइड + अम्ल → लवण + जल', obs:mo.f + ' अम्ल में घुलकर लवण + जल बनाता है — उदासीनीकरण जैसी ही अभिक्रिया। घोल गर्म होता है।', sol:'#e0f2fe', gas:false, precip:false, heat:true };
+  }
+
+  // --- अम्ल + धातु → लवण + H₂ (विस्थापन) ---
+  if ((A.kind === 'acid' && B.kind === 'metal') || (A.kind === 'metal' && B.kind === 'acid')) {
+    const ac = A.kind === 'acid' ? A : B, mt = B.kind === 'metal' ? B : A;
+    if (CH_BELOW_H[mt.cat]) return { eq:'—', type:'कोई अभिक्रिया नहीं', obs:mt.cat + ' क्रियाशीलता श्रेणी में हाइड्रोजन से नीचे है — तनु अम्ल से H₂ गैस नहीं बनती। (सिर्फ़ सांद्र ऑक्सीकारक अम्ल प्रभाव करते हैं।)', sol:'#f1f5f9', gas:false, precip:false, heat:false, skipBal:true };
+    const salt = chFormula(mt.cat, mt.cChg, ac.an, ac.aChg);
+    const eq = chBalanceEq([mt.f, ac.f], [salt, 'H₂↑']);
+    const hot = (mt.cat === 'Mg' || mt.cat === 'Na' || mt.cat === 'K');
+    return { eq, type:'विस्थापन अभिक्रिया — धातु ने हाइड्रोजन को विस्थापित किया', obs:mt.cat + ' अम्ल में घुल गया — ' + (hot ? 'बहुत तेज़ी से, हल्की गर्मी के साथ' : 'हाइड्रोजन गैस के बुलबुलों के साथ') + '। जलती तीली पास करने पर "पॉप-पॉप" ध्वनि (H₂ की पहचान)।', sol:'#e0f2fe', gas:true, precip:false, heat:hot };
+  }
+
+  // --- क्षार + धातु (Al / Zn — उभयधर्मी) → लवण + H₂ ---
+  if ((A.kind === 'base' && B.kind === 'metal') || (A.kind === 'metal' && B.kind === 'base')) {
+    const ba = A.kind === 'base' ? A : B, mt = B.kind === 'metal' ? B : A;
+    if (mt.cat === 'Al') return { eq:'2Al + 2NaOH + 2H₂O → 2NaAlO₂ + 3H₂↑', type:'उभयधर्मी धातु + क्षार', obs:'एल्युमिनियम क्षार में घुलकर सोडियम एल्युमिनेट + H₂ गैस देता है — एल्युमिनियम उभयधर्मी धातु है।', sol:'#e0f2fe', gas:true, precip:false, heat:false };
+    if (mt.cat === 'Zn') return { eq:'Zn + 2NaOH → Na₂ZnO₂ + H₂↑', type:'उभयधर्मी धातु + क्षार', obs:'जिंक क्षार में घुलकर सोडियम ज़िंकेट + H₂ बनाता है — जिंक उभयधर्मी धातु है।', sol:'#e0f2fe', gas:true, precip:false, heat:false };
+    return null;
+  }
+
+  // --- क्षार + धातु लवण → धातु हाइड्रॉक्साइड + लवण (द्विविस्थापन) ---
+  if ((A.kind === 'base' && B.kind === 'salt') || (A.kind === 'salt' && B.kind === 'base')) {
+    const ba = A.kind === 'base' ? A : B, sl = B.kind === 'salt' ? B : A;
+    if (sl.cat === 'Na' || sl.cat === 'K') return null; // दोनों क्षारीय — कुछ नहीं
+    const hx = chFormula(sl.cat, sl.cChg, 'OH', 1);
+    const other = chFormula(ba.cat, ba.cChg, sl.an, sl.aChg);
+    const eq = chBalanceEq([ba.f, sl.f], [hx + '↓', other]);
+    const precip = chPrecipInfo(sl.cat, 'OH');
+    return { eq, type:'द्विविस्थापन अभिक्रिया — अवक्षेप', obs:ba.f + ' क्षार डालते ही ' + (precip || 'धातु हाइड्रॉक्साइड') + ' बना — ' + other + ' घोल में बचा।', sol:'#e0f2fe', gas:false, precip:precip, heat:false };
+  }
+
+  // --- धातु + लवण-विलयन → विस्थापन ---
+  if ((A.kind === 'metal' && B.kind === 'salt') || (A.kind === 'salt' && B.kind === 'metal')) {
+    const mt = A.kind === 'metal' ? A : B, sl = B.kind === 'salt' ? B : A;
+    if (!['Cu','Fe','Ag','Pb'].includes(sl.cat)) return null;
+    if ((CH_REACT_RANK[mt.cat] || 0) <= (CH_REACT_RANK[sl.cat] || 0)) return null; // कम क्रियाशील → नहीं
+    const salt = chFormula(mt.cat, mt.cChg, sl.an, sl.aChg);
+    const eq = chBalanceEq([mt.f, sl.f], [salt, sl.cat + '↓']);
+    return { eq, type:'विस्थापन अभिक्रिया', obs:mt.cat + ' क्रियाशीलता श्रेणी में ' + sl.cat + ' से ऊपर है — लवण से ' + sl.cat + ' विस्थापित होकर ' + (sl.cat === 'Cu' ? 'लाल-कत्थई ताँबे' : sl.cat === 'Ag' ? 'चमकीली चाँदी की परत' : sl.cat + ' की परत') + ' जम गई; घोल का रंग बदला।', sol:'#e0f2fe', gas:false, precip:sl.cat === 'Cu' ? 'लाल ताँबा' : sl.cat === 'Ag' ? 'चाँदी की परत' : (sl.cat + ' की परत'), heat:false };
+  }
+
+  // --- लवण + लवण (कार्बोनेट सहित) → द्विविस्थापन (हर जोड़ी के लिए समीकरण) ---
+  const chSaltish = (k) => k === 'salt' || k === 'carbonate';
+  if (chSaltish(A.kind) && chSaltish(B.kind) && !(A.kind === 'carbonate' && B.kind === 'carbonate')) {
+    if (A.cat === B.cat) return null; // एक ही धातु — कोई बदलाव नहीं
+    const p1 = chFormula(A.cat, A.cChg, B.an, B.aChg);
+    const p2 = chFormula(B.cat, B.cChg, A.an, A.aChg);
+    if (p1 === A.f && p2 === B.f) return null; // स्वयं-उत्पाद — कोई अभिक्रिया नहीं
+    const i1 = chInsoluble(A.cat, B.an), i2 = chInsoluble(B.cat, A.an);
+    const eq = chBalanceEq([A.f, B.f], [p1 + (i1 ? '↓' : ''), p2 + (i2 ? '↓' : '')]);
+    let precip = i1 ? chPrecipInfo(A.cat, B.an) : i2 ? chPrecipInfo(B.cat, A.an) : '';
+    let obs;
+    if (precip) obs = 'दोनों लवण मिलाते ही आयन अदला-बदली — द्विविस्थापन से ' + precip + ' बना, बाकी घोल में घुला रहा।';
+    else obs = 'आयन अदला-बदली (द्विविस्थापन) हो सकती है — पर दोनों उत्पाद जल में घुलनशील हैं, इसलिए कोई अवक्षेप/गैस दिखाई नहीं देता (कोई दृश्य परिवर्तन नहीं)।';
+    return { eq, type:'द्विविस्थापन अभिक्रिया' + (precip ? ' — अवक्षेप' : ' (आयनिक)'), obs:obs, sol:precip ? '#f8fafc' : '#e2e8f0', gas:false, precip:precip || false, heat:false };
+  }
+
+  return null;
+}
+
 function mixInferPair(idA, idB) {
   const aE = mixEltData(idA), bE = mixEltData(idB);
   const aC = CHEMICALS[idA], bC = CHEMICALS[idB];
@@ -835,16 +1066,36 @@ function mixRemove(id) {
 function labEsc(s) {
   return String(s || '').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
 }
+
+// अभिक्रिया की किस्म के चिप — हर परिणाम में दिखाओ
+function mixCategoryChips(r) {
+  if (!r) return '';
+  const t = r.type || '';
+  const chips = [];
+  if (/द्विविस्थापन/.test(t)) chips.push('द्विविस्थापन');
+  else if (/विस्थापन/.test(t)) chips.push('विस्थापन');
+  if (/संयोजन/.test(t)) chips.push('संयोजन');
+  if (/अपघटन/.test(t)) chips.push('अपघटन');
+  if (/उदासीनीकरण/.test(t)) chips.push('उदासीनीकरण');
+  if (/ऑक्सीकरण|रेडॉक्स|अपचयन/.test(t)) chips.push('ऑक्सीकरण-अपचयन');
+  if (/अवक्षेप|परिक्षेपण/.test(t) || r.precip) chips.push('अवक्षेपण');
+  if (/अम्ल \+ कार्बोनेट/.test(t)) chips.push('द्विविस्थापन');
+  if (/विलयन|तनुकरण/.test(t)) chips.push('भौतिक परिवर्तन');
+  return chips.length ? '<div class="mix-cats"><b>किस्म:</b> ' + chips.map(c => `<span class="mix-cat">${c}</span>`).join('') + '</div>' : '';
+}
+
 function labBalanceHtml(r) {
-  if (!r || r.skipBal || typeof checkBalance !== 'function') return '';
+  if (!r) return '';
+  let html = mixCategoryChips(r);
   const eqStr = r.eq;
+  if (!eqStr || eqStr === '—' || r.skipBal || typeof checkBalance !== 'function' || typeof bDecompose !== 'function') return html;
   try {
     const cb = checkBalance(eqStr);
-    if (!cb) return '<div class="mix-bal none">ℹ️ इस समीकरण के लिए परमाणु-गिनती स्वतः नहीं हो पाई — इसे सूत्र रूप में देखो।</div>';
-    if (cb.balanced) return '<div class="mix-bal ok">✅ <b>संतुलित समीकरण:</b> परमाणु दोनों ओर बराबर हैं (परमाणु न तो बनते हैं न नष्ट होते)।</div>';
+    if (!cb) return html + '<div class="mix-bal none">ℹ️ इस समीकरण के लिए परमाणु-गिनती स्वतः नहीं हो पाई — इसे सूत्र रूप में देखो।</div>';
+    if (cb.balanced) return html + '<div class="mix-bal ok">✅ <b>संतुलित समीकरण:</b> परमाणु दोनों ओर बराबर हैं (परमाणु न तो बनते हैं न नष्ट होते)।</div>';
     const diff = cb.keys.filter(k => (cb.L[k] || 0) !== (cb.R[k] || 0)).map(k => `${k}: ${cb.L[k] || 0} vs ${cb.R[k] || 0}`).join('; ');
-    return `<div class="mix-bal bad">⚠️ <b>असंतुलित:</b> परमाणु बराबर नहीं — ${labEsc(diff)}. &nbsp; <button class="btn btn-secondary btn-sm" onclick="openBalancer('${labEsc(eqStr)}', 'balOut');return false;">⚖️ संतुलित बनाना सीखो</button></div>`;
-  } catch (e) { return ''; }
+    return html + `<div class="mix-bal bad">⚠️ <b>असंतुलित:</b> परमाणु बराबर नहीं — ${labEsc(diff)}. &nbsp; <button class="btn btn-secondary btn-sm" onclick="openBalancer('${labEsc(eqStr)}', 'balOut');return false;">⚖️ संतुलित बनाना सीखो</button></div>`;
+  } catch (e) { return html; }
 }
 
 function mixChemicals() {
@@ -876,8 +1127,19 @@ function mixChemicals() {
     }
   }
 
+  // 3) चतुर इंजन — कोई भी दो रसायन (अम्ल+धातु, लवण+लवण, क्षार+लवण ...)
   if (!found) {
-    found = { eq:'—', type:'कोई ज्ञात अभिक्रिया नहीं', obs:'इन पदार्थों की आपस में बोर्ड-स्तर की अभिक्रिया नहीं — घोल/पदार्थ मिले रह गए। (हर अभिक्रिया ज़रूरी नहीं होती!) ऊपर "क्या-क्या मिलाएँ" के सुझाव आज़माओ।', sol:'#94a3b8', gas:false, heat:false };
+    for (let i = 0; i < mixBeaker.length && !found; i++) {
+      for (let j = i + 1; j < mixBeaker.length; j++) {
+        const a = mixBeaker[i], b = mixBeaker[j];
+        const r = mixInferChemChem(a, b) || mixInferChemChem(b, a);
+        if (r) { found = r; idA = a; idB = b; break; }
+      }
+    }
+  }
+
+  if (!found) {
+    found = { eq:'—', type:'कोई ज्ञात अभिक्रिया नहीं', obs:'इन पदार्थों की आपस में बोर्ड-स्तर की अभिक्रिया नहीं मिली — घोल/पदार्थ मिले रह गए। (जरूरी नहीं कि हर अभिक्रिया हो! उदा. तनु अम्ल + ताँबा या कम क्रियाशील धातु।) ऊपर "क्या-क्या मिलाएँ" के सुझाव आज़माओ।', sol:'#94a3b8', gas:false, heat:false, skipBal:true };
   }
   mixResult = found;
 
@@ -928,5 +1190,5 @@ function showToastForLab(msg, type) {
 
 // export for tests
 if (typeof module !== 'undefined' && module.exports) {
-  module.exports = { EXPERIMENTS, renderExperiments, switchExpTab, findExperiment, CHEMICALS, REACTIONS, renderMixLab, mixAdd, mixClear, mixRemove, mixChemicals, mixHint, mixInferPair, mixEltData, mixEltIds, mixInfo };
+  module.exports = { EXPERIMENTS, renderExperiments, switchExpTab, findExperiment, CHEMICALS, REACTIONS, renderMixLab, mixAdd, mixClear, mixRemove, mixChemicals, mixHint, mixInferPair, mixInferChemChem, mixEltData, mixEltIds, mixInfo };
 }

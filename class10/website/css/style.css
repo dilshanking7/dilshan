@@ -679,6 +679,9 @@ table.data-table tr:nth-child(even){ background:#f8fafc; }
 .mix-bal.ok{ background:#f0fdf4; color:#15803d; }
 .mix-bal.bad{ background:#fffbeb; color:#b45309; }
 .mix-bal.none{ background:#f1f5f9; color:#64748b; }
+.mix-cats{ margin:8px 0; font-size:13px; color:#94a3b8; }
+.mix-cats b{ color:#cbd5e1; margin-right:6px; }
+.mix-cat{ display:inline-block; background:#1e1b4b; color:#a5b4fc; border:1px solid #4338ca; border-radius:999px; padding:3px 10px; font-size:12px; font-weight:700; margin:2px 4px 2px 0; }
 .btn-sm{ padding:6px 12px; font-size:13px; }
 
 /* ---------- GraphLab (Canvas Grapher) ---------- */
