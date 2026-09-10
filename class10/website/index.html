@@ -2,7 +2,13 @@
 <html lang="hi">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
+<meta name="theme-color" content="#6366f1">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="JAC 10th Hub">
+<meta name="description" content="झारखंड बोर्ड कक्षा 10 - 3000+ प्रश्न, क्विज़, नोट्स, फॉर्मूले, प्रयोगशाला">
+<link rel="manifest" href="manifest.json">
 <title>JAC 10th Study Hub — क्विज़, नोट्स, फॉर्मूले, प्रयोग</title>
 <link rel="stylesheet" href="css/style.css">
 </head>
@@ -52,6 +58,12 @@
   <p data-i18n="footer_credit">🎓 JAC Board Class 10 Study Hub | NCERT Based | पिछले 5 वर्षों (2020-2024) के प्रश्न</p>
   <p style="margin-top:8px;font-size:14px" data-i18n="footer_motto">💜 आपकी मेहनत ही आपकी सफलता है!</p>
 </footer>
+
+<div class="pwa-install-banner" id="pwaBanner">
+  <p>📱 इसे Home Screen पर install करें — बिना Internet भी चलेगा!</p>
+  <button class="pwa-install-btn" onclick="installPWA()">Install करें</button>
+  <button class="pwa-dismiss" onclick="dismissPWA()">✕</button>
+</div>
 
 <script src="js/allquestions.js"></script>
 <script src="js/data.js"></script>

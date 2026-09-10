@@ -2,7 +2,12 @@
 <html lang="hi">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
+<meta name="theme-color" content="#6366f1">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="JAC 10th Hub">
+<link rel="manifest" href="manifest.json">
 <title>गणित लैब (Math Lab) — JAC 10th Study Hub</title>
 <link rel="stylesheet" href="css/style.css">
 </head>
@@ -15,33 +20,30 @@
   <p data-i18n="pm_desc">ग्राफ़ बनाओ, x निकालो, d निकालो — सारे फ़ॉर्मूले, चरण-दर-चरण हल</p>
 </div>
 
-<section class="section">
-  <div class="container">
-    <div class="card ml-card">
-      <h2 data-i18n="mm_graph">📈 आधुनिक ग्राफ़ बनाओ (Live Graph)</h2>
-      <p class="hint">समीकरण टाइप करते ही ग्राफ़ <b>अपने-आप बनता</b> है — जैसे <b>x^2-5x+6</b>, <b>2x+3</b>, <b>sin(x)</b>, <b>x^3-6x^2+11x-6</b></p>
-      <div class="ml-live">
-        <div class="ml-side">
-          <label class="ml-lbl" for="graphExpr">समीकरण (Equation)<span class="ml-livebadge">LIVE</span></label>
-          <input id="graphExpr" class="ml-big" placeholder="f(x) लिखो — जैसे x^2-5x+6" value="x^2-5x+6" autocomplete="off" spellcheck="false">
-          <div class="ml-range-row">
-            <label><span>x min</span><input id="graphMin" class="ml-num" placeholder="x min" value="-10"></label>
-            <label><span>x max</span><input id="graphMax" class="ml-num" placeholder="x max" value="10"></label>
-          </div>
-          <div class="ml-opts">
-            <label class="ml-chk"><input type="checkbox" id="graphFill" checked> क्षेत्रफल भरें</label>
-            <label class="ml-chk"><input type="checkbox" id="graphAnim" checked> एनीमेशन</label>
-          </div>
-          <button class="btn ml-reload" onclick="runGraph()">⟳ ग्राफ़ ताज़ा करो</button>
-          <div id="graphErr" class="ml-errbox"></div>
-        </div>
-        <div class="ml-graphcol">
-          <svg id="graphSvg" class="ml-curve ml-curve-dark" viewBox="0 0 640 400" xmlns="http://www.w3.org/2000/svg"></svg>
-          <div id="mlExamples" class="ml-chips"></div>
-          <div id="graphInfo" class="ml-info"></div>
-        </div>
+<section class="section" style="padding:0">
+  <div class="gl-app">
+    <header class="gl-topbar">
+      <div class="gl-logo">📈 <span>Graph</span>Lab</div>
+      <div class="gl-top-actions">
+        <button class="gl-btn" onclick="glResetView()">↺ रीसेट</button>
+        <button class="gl-btn" onclick="glClearAll()">🗑️ क्लियर</button>
       </div>
-    </div>
+    </header>
+    <main class="gl-main">
+      <aside class="gl-panel" id="glPanel">
+        <div class="gl-expressions" id="glExpressions"></div>
+        <button class="gl-add-btn" onclick="glAddExpression()">+ नया समीकरण</button>
+      </aside>
+      <section class="gl-graph-area">
+        <canvas id="glCanvas"></canvas>
+        <div class="gl-coords" id="glCoords">x: 0 &nbsp; y: 0</div>
+        <div class="gl-zoom-ctrl">
+          <button onclick="glZoom(1.3)">+</button>
+          <button onclick="glZoom(0.7)">−</button>
+          <button onclick="glResetView()">⌂</button>
+        </div>
+      </section>
+    </main>
   </div>
 </section>
 
@@ -121,5 +123,10 @@
 <script src="js/common.js"></script>
 <script src="js/mathlab.js"></script>
 <script src="js/lang.js"></script>
+<div class="pwa-install-banner" id="pwaBanner">
+  <p>📱 इसे Home Screen पर install करें — बिना Internet भी चलेगा!</p>
+  <button class="pwa-install-btn" onclick="installPWA()">Install करें</button>
+  <button class="pwa-dismiss" onclick="dismissPWA()">✕</button>
+</div>
 </body>
 </html>

@@ -5,6 +5,267 @@
 //  Pure vanilla JS — works offline on file://.
 // ============================================================
 
+// ---------- GraphLab: Advanced Canvas Grapher ----------
+const GL_COLORS = ['#1976d2','#e53935','#43a047','#8e24aa','#fb8c00','#00897b','#d81b60','#5c6bc0'];
+let glExprs = [{ id:1, value:'x^2', color:GL_COLORS[0] }];
+let glNextId = 2;
+let glScale = 50, glOffX = 0, glOffY = 0;
+let glDragging = false, glLastX = 0, glLastY = 0;
+let glCanvas, glCtx;
+
+function glInit() {
+  glCanvas = document.getElementById('glCanvas');
+  if (!glCanvas) return;
+  glCtx = glCanvas.getContext('2d');
+  glResize();
+  glRenderExprs();
+  glBindEvents();
+  window.addEventListener('resize', glResize);
+}
+
+function glResize() {
+  if (!glCanvas) return;
+  const r = glCanvas.getBoundingClientRect();
+  const dpr = window.devicePixelRatio || 1;
+  glCanvas.width = r.width * dpr;
+  glCanvas.height = r.height * dpr;
+  glCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  glDraw();
+}
+
+function glW2S(x, y) {
+  const w = glCanvas.clientWidth, h = glCanvas.clientHeight;
+  return { x: w / 2 + glOffX + x * glScale, y: h / 2 + glOffY - y * glScale };
+}
+function glS2W(sx, sy) {
+  const w = glCanvas.clientWidth, h = glCanvas.clientHeight;
+  return { x: (sx - w / 2 - glOffX) / glScale, y: -(sy - h / 2 - glOffY) / glScale };
+}
+
+function glDraw() {
+  if (!glCtx || !glCanvas) return;
+  const W = glCanvas.clientWidth, H = glCanvas.clientHeight;
+  const c = glCtx;
+  c.clearRect(0, 0, W, H);
+  c.fillStyle = '#fff';
+  c.fillRect(0, 0, W, H);
+
+  const cx = W / 2 + glOffX, cy = H / 2 + glOffY;
+
+  // Grid
+  c.lineWidth = 1;
+  c.strokeStyle = '#f0f0f0';
+  for (let x = cx % glScale; x < W; x += glScale) { c.beginPath(); c.moveTo(x, 0); c.lineTo(x, H); c.stroke(); }
+  for (let y = cy % glScale; y < H; y += glScale) { c.beginPath(); c.moveTo(0, y); c.lineTo(W, y); c.stroke(); }
+
+  // Axes
+  c.strokeStyle = '#888';
+  c.lineWidth = 1.5;
+  c.beginPath(); c.moveTo(0, cy); c.lineTo(W, cy); c.stroke();
+  c.beginPath(); c.moveTo(cx, 0); c.lineTo(cx, H); c.stroke();
+
+  // Tick labels
+  c.fillStyle = '#666';
+  c.font = '11px Consolas, monospace';
+  const step = glScale;
+  for (let x = cx + step; x < W; x += step) { const v = Math.round((x - cx) / glScale); if (v !== 0) c.fillText(v, x + 3, cy - 5); }
+  for (let x = cx - step; x > 0; x -= step) { const v = Math.round((x - cx) / glScale); if (v !== 0) c.fillText(v, x + 3, cy - 5); }
+  for (let y = cy - step; y > 0; y -= step) { const v = Math.round((cy - y) / glScale); if (v !== 0) c.fillText(v, cx + 5, y - 3); }
+  for (let y = cy + step; y < H; y += step) { const v = Math.round((cy - y) / glScale); if (v !== 0) c.fillText(v, cx + 5, y - 3); }
+
+  // Origin
+  c.fillStyle = '#888';
+  c.fillText('O', cx - 14, cy + 14);
+
+  // Plot each expression
+  glExprs.forEach(expr => {
+    if (!expr.value.trim()) return;
+    let fn;
+    try { fn = parseMath(expr.value); } catch (e) { return; }
+    c.strokeStyle = expr.color;
+    c.lineWidth = 2.5;
+    c.lineCap = 'round';
+    c.lineJoin = 'round';
+    c.beginPath();
+    let started = false;
+    for (let px = 0; px < W; px++) {
+      const w = glS2W(px, 0);
+      let y;
+      try { y = fn(w.x); } catch (e) { y = NaN; }
+      if (!isFinite(y)) { started = false; continue; }
+      const s = glW2S(w.x, y);
+      if (s.y < -5000 || s.y > H + 5000) { started = false; continue; }
+      if (!started) { c.moveTo(s.x, s.y); started = true; } else { c.lineTo(s.x, s.y); }
+    }
+    c.stroke();
+
+    // Mark roots (where y ≈ 0)
+    try {
+      const roots = [];
+      const N = 800;
+      const xMin = glS2W(0, 0).x, xMax = glS2W(W, 0).x;
+      const dx = (xMax - xMin) / N;
+      let prevY = null, prevX = null;
+      for (let k = 0; k <= N; k++) {
+        const xv = xMin + dx * k;
+        let yv;
+        try { yv = fn(xv); } catch (e) { yv = NaN; }
+        if (isFinite(yv)) {
+          if (prevY !== null && prevY * yv <= 0) {
+            // bisect
+            let a = prevX, b = xv, fa = prevY, fb = yv;
+            for (let it = 0; it < 40; it++) {
+              const m = (a + b) / 2;
+              let fm;
+              try { fm = fn(m); } catch (e) { fm = NaN; }
+              if (!isFinite(fm)) break;
+              if (fa * fm < 0) { b = m; fb = fm; } else { a = m; fa = fm; }
+            }
+            const r = (a + b) / 2;
+            if (!roots.some(z => Math.abs(z - r) < 1e-4)) roots.push(r);
+          }
+          prevY = yv; prevX = xv;
+        } else { prevY = null; }
+      }
+      roots.forEach(r => {
+        const s = glW2S(r, 0);
+        c.beginPath();
+        c.arc(s.x, s.y, 5, 0, Math.PI * 2);
+        c.fillStyle = expr.color;
+        c.fill();
+        c.strokeStyle = '#fff';
+        c.lineWidth = 2;
+        c.stroke();
+        c.fillStyle = expr.color;
+        c.font = 'bold 11px Consolas, monospace';
+        c.fillText('x=' + (Math.round(r * 100) / 100), s.x + 8, s.y - 8);
+      });
+    } catch (e) {}
+  });
+}
+
+function glRenderExprs() {
+  const box = document.getElementById('glExpressions');
+  if (!box) return;
+  box.innerHTML = '';
+  glExprs.forEach(expr => {
+    const div = document.createElement('div');
+    div.className = 'gl-expr';
+    div.innerHTML = `<div class="gl-color-dot" style="background:${expr.color}"></div>` +
+      `<input class="gl-expr-input" value="${mlescape(expr.value)}" placeholder="f(x) जैसे x^2" data-id="${expr.id}">` +
+      `<button class="gl-expr-del" data-del="${expr.id}">×</button>`;
+    box.appendChild(div);
+    div.querySelector('.gl-expr-input').addEventListener('input', e => {
+      expr.value = e.target.value;
+      glDraw();
+    });
+    div.querySelector('.gl-expr-del').addEventListener('click', () => {
+      glExprs = glExprs.filter(e => e.id !== expr.id);
+      glRenderExprs();
+      glDraw();
+    });
+  });
+}
+
+function glAddExpression() {
+  glExprs.push({ id: glNextId++, value: '', color: GL_COLORS[glExprs.length % GL_COLORS.length] });
+  glRenderExprs();
+  const inputs = document.querySelectorAll('.gl-expr-input');
+  if (inputs.length) inputs[inputs.length - 1].focus();
+}
+
+function glClearAll() {
+  glExprs = [];
+  glRenderExprs();
+  glDraw();
+}
+
+function glResetView() {
+  glScale = 50; glOffX = 0; glOffY = 0;
+  glDraw();
+}
+
+function glZoom(f) {
+  glScale *= f;
+  glScale = Math.max(8, Math.min(glScale, 600));
+  glDraw();
+}
+
+function glBindEvents() {
+  if (!glCanvas) return;
+
+  // Mouse drag
+  glCanvas.addEventListener('mousedown', e => {
+    glDragging = true;
+    glCanvas.classList.add('dragging');
+    glLastX = e.clientX;
+    glLastY = e.clientY;
+  });
+  window.addEventListener('mouseup', () => { glDragging = false; if (glCanvas) glCanvas.classList.remove('dragging'); });
+  window.addEventListener('mousemove', e => {
+    if (!glDragging) return;
+    glOffX += e.clientX - glLastX;
+    glOffY += e.clientY - glLastY;
+    glLastX = e.clientX;
+    glLastY = e.clientY;
+    glDraw();
+  });
+
+  // Wheel zoom
+  glCanvas.addEventListener('wheel', e => {
+    e.preventDefault();
+    const mx = e.offsetX, my = e.offsetY;
+    const before = glS2W(mx, my);
+    glScale *= e.deltaY < 0 ? 1.12 : 0.89;
+    glScale = Math.max(8, Math.min(glScale, 600));
+    const after = glS2W(mx, my);
+    glOffX += (after.x - before.x) * glScale;
+    glOffY -= (after.y - before.y) * glScale;
+    glDraw();
+  }, { passive: false });
+
+  // Touch support
+  let touchStart = null, pinchDist = null;
+  glCanvas.addEventListener('touchstart', e => {
+    if (e.touches.length === 1) {
+      touchStart = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+    } else if (e.touches.length === 2) {
+      const dx = e.touches[0].clientX - e.touches[1].clientX;
+      const dy = e.touches[0].clientY - e.touches[1].clientY;
+      pinchDist = Math.sqrt(dx * dx + dy * dy);
+    }
+  }, { passive: true });
+  glCanvas.addEventListener('touchmove', e => {
+    if (e.touches.length === 1 && touchStart) {
+      glOffX += e.touches[0].clientX - touchStart.x;
+      glOffY += e.touches[0].clientY - touchStart.y;
+      touchStart = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+      glDraw();
+    } else if (e.touches.length === 2 && pinchDist) {
+      const dx = e.touches[0].clientX - e.touches[1].clientX;
+      const dy = e.touches[0].clientY - e.touches[1].clientY;
+      const newDist = Math.sqrt(dx * dx + dy * dy);
+      glZoom(newDist / pinchDist);
+      pinchDist = newDist;
+    }
+  }, { passive: true });
+  glCanvas.addEventListener('touchend', () => { touchStart = null; pinchDist = null; });
+
+  // Coordinates display
+  glCanvas.addEventListener('mousemove', e => {
+    const w = glS2W(e.offsetX, e.offsetY);
+    const coordEl = document.getElementById('glCoords');
+    if (coordEl) coordEl.innerHTML = 'x: ' + w.x.toFixed(2) + ' &nbsp; y: ' + w.y.toFixed(2);
+  });
+
+  // Double click to zoom in
+  glCanvas.addEventListener('dblclick', e => { e.preventDefault(); glZoom(1.5); });
+}
+
+if (typeof document !== 'undefined') {
+  document.addEventListener('DOMContentLoaded', glInit);
+}
+
 function mlescape(str) {
   return String(str || '').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
 }
@@ -663,6 +924,12 @@ function runCoord(outId) {
 }
 
 // ---------- page wiring ----------
+function runSolve() {
+  const eq = document.getElementById('eqInput')?.value;
+  if (!eq) return;
+  solveEquation('eqOut', eq);
+}
+
 const ML_EXAMPLES = [
   { label: 'x² − 5x + 6', v: 'x^2-5x+6' },
   { label: '2x + 3', v: '2x+3' },
@@ -680,64 +947,9 @@ function mlColor(str) {
   return ML_PALETTE[h % ML_PALETTE.length];
 }
 
-let _graphTimer = null;
-function scheduleGraph() {
-  clearTimeout(_graphTimer);
-  _graphTimer = setTimeout(runGraph, 220);
-}
-
-function runGraph() {
-  const f = document.getElementById('graphExpr')?.value || '';
-  const xmin = parseFloat(document.getElementById('graphMin')?.value);
-  const xmax = parseFloat(document.getElementById('graphMax')?.value);
-  const fill = document.getElementById('graphFill')?.checked !== false;
-  const anim = document.getElementById('graphAnim')?.checked !== false;
-  const errBox = document.getElementById('graphErr');
-  const infoEl = document.getElementById('graphInfo');
-  let fn;
-  try { fn = parseMath(f); }
-  catch (e) {
-    if (errBox) { errBox.innerHTML = '⚠️ ' + mlescape(e.message); errBox.classList.add('show'); }
-    if (infoEl) infoEl.innerHTML = '';
-    drawGraph('graphSvg', f, isFinite(xmin) ? xmin : -10, isFinite(xmax) ? xmax : 10, undefined,
-      { theme: 'dark', animate: anim, fill: false });
-    return;
-  }
-  if (errBox) errBox.classList.remove('show');
-  drawGraph('graphSvg', f, isFinite(xmin) ? xmin : -10, isFinite(xmax) ? xmax : 10, undefined,
-    { theme: 'dark', color: mlColor(f), fill, animate: anim });
-  try {
-    const info = polynomialInfo(f);
-    if (info && info.coeffs) writeGraphInfo(f, graphType(info.deg, info.coeffs).name);
-    else writeGraphInfo(f, 'वक्र (Curve)');
-  } catch (e) { writeGraphInfo(f, 'वक्र (Curve)'); }
-}
-
-function initGraphLive() {
-  ['graphExpr', 'graphMin', 'graphMax'].forEach(id => {
-    const el = document.getElementById(id);
-    if (el) el.addEventListener('input', scheduleGraph);
-  });
-  ['graphFill', 'graphAnim'].forEach(id => {
-    const el = document.getElementById(id);
-    if (el) el.addEventListener('change', runGraph);
-  });
-  const expr = document.getElementById('graphExpr');
-  if (expr) expr.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); runGraph(); } });
-}
-
-function runSolve() {
-  const eq = document.getElementById('eqInput')?.value;
-  if (!eq) return;
-  solveEquation('eqOut', eq);
-}
-
 function initMathLab() {
-  initGraphLive();
-  const mc = document.getElementById('mlExamples');
-  if (mc) {
-    mc.innerHTML = ML_EXAMPLES.map(e => `<button class="ml-chip" onclick="fillInput('graphExpr','${e.v}');runGraph()">${e.label}</button>`).join('');
-  }
+  // Canvas grapher is initialized via glInit() in DOMContentLoaded above
+
   const ec = document.getElementById('eqExamples');
   if (ec) {
     ec.innerHTML = [
@@ -752,7 +964,6 @@ function initMathLab() {
     dc.innerHTML = ['3x^2+2x-5', 'x^3-4x', 'sin(x)', 'x^2+x+1'].map(v =>
       `<button class="ml-chip" onclick="document.getElementById('derivInput').value='${v}';runDerivative()">y = ${v}</button>`).join('');
   }
-  runGraph();
 }
 
 if (typeof document !== 'undefined') {
@@ -760,5 +971,5 @@ if (typeof document !== 'undefined') {
 }
 
 if (typeof module !== 'undefined' && module.exports) {
-  module.exports = { parseMath, evalExpr, solveEquation, dydx, drawGraph, polynomialInfo, graphType };
+  module.exports = { parseMath, evalExpr, solveEquation, dydx, drawGraph, polynomialInfo, graphType, glInit, glDraw, glAddExpression, glClearAll, glResetView, glZoom };
 }

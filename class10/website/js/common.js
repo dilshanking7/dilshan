@@ -134,9 +134,44 @@ function toast(msg, type) {
 }
 
 // ---- Auto setup on DOM ready ----
-document.addEventListener('DOMContentLoaded', buildNav);
+document.addEventListener('DOMContentLoaded', () => {
+  buildNav();
+  setupPWA();
+});
+
+// ---- PWA Setup (works on every page) ----
+let deferredPrompt;
+function setupPWA() {
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('./sw.js').catch(() => {});
+  }
+  window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    deferredPrompt = e;
+    const banner = document.getElementById('pwaBanner');
+    if (banner) banner.classList.add('show');
+  });
+  window.addEventListener('appinstalled', () => { deferredPrompt = null; });
+}
+
+function installPWA() {
+  if (!deferredPrompt) return;
+  deferredPrompt.prompt();
+  deferredPrompt.userChoice.then((r) => {
+    if (r.outcome === 'accepted') {
+      const b = document.getElementById('pwaBanner');
+      if (b) b.classList.remove('show');
+    }
+    deferredPrompt = null;
+  });
+}
+
+function dismissPWA() {
+  const b = document.getElementById('pwaBanner');
+  if (b) b.classList.remove('show');
+}
 
 // export for tests (harmless in the browser)
 if (typeof module !== 'undefined' && module.exports) {
-  module.exports = { buildNav, renderSubjectCards, getURLParam, escapeHtml, animateValue, fillSubjectSelect, fixSpelling, toast };
+  module.exports = { buildNav, renderSubjectCards, getURLParam, escapeHtml, animateValue, fillSubjectSelect, fixSpelling, toast, setupPWA, installPWA, dismissPWA };
 }

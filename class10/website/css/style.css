@@ -21,13 +21,15 @@
   --shadow-lg:0 10px 40px rgba(15,23,42,.15);
 }
 
-html{ scroll-behavior:smooth; }
+html{ scroll-behavior:smooth; overscroll-behavior:contain; }
 body{
   font-family:'Segoe UI','Nirmala UI','Noto Sans Devanagari',system-ui,sans-serif;
   background:var(--bg);
   color:var(--text);
   line-height:1.7;
   font-size:17px;
+  -webkit-font-smoothing:antialiased;
+  overscroll-behavior:contain;
 }
 h1,h2,h3,h4{ color:var(--dark); line-height:1.4; }
 img{ max-width:100%; }
@@ -177,7 +179,8 @@ select{
 .option{
   display:flex; align-items:center; gap:12px; padding:14px 18px;
   border:2px solid var(--border); border-radius:12px; cursor:pointer; transition:.15s;
-  font-size:17px; background:#fff;
+  font-size:17px; background:#fff; touch-action:manipulation; -webkit-tap-highlight-color:transparent;
+  min-height:48px;
 }
 .option:hover:not(.locked){ border-color:var(--primary); background:var(--primary-light); }
 .option .opt-letter{
@@ -678,6 +681,48 @@ table.data-table tr:nth-child(even){ background:#f8fafc; }
 .mix-bal.none{ background:#f1f5f9; color:#64748b; }
 .btn-sm{ padding:6px 12px; font-size:13px; }
 
+/* ---------- GraphLab (Canvas Grapher) ---------- */
+.gl-app{ width:100%; height:70vh; min-height:420px; display:flex; flex-direction:column; background:#fff; border:1px solid var(--border); border-radius:var(--radius); overflow:hidden; box-shadow:var(--shadow); }
+.gl-topbar{ height:48px; display:flex; align-items:center; padding:0 14px; border-bottom:1px solid var(--border); background:#fff; z-index:10; }
+.gl-logo{ font-size:18px; font-weight:800; color:var(--primary); }
+.gl-logo span{ color:var(--dark); }
+.gl-top-actions{ margin-left:auto; display:flex; gap:6px; }
+.gl-btn{ border:1px solid var(--border); background:#fff; border-radius:8px; padding:6px 12px; cursor:pointer; font-size:13px; font-weight:600; font-family:inherit; transition:.15s; }
+.gl-btn:hover{ background:#f3f4f6; }
+.gl-main{ flex:1; display:flex; min-height:0; }
+.gl-panel{ width:280px; border-right:1px solid var(--border); background:#fafafa; display:flex; flex-direction:column; z-index:5; }
+.gl-expressions{ overflow-y:auto; flex:1; padding:10px; }
+.gl-expr{ display:flex; align-items:center; gap:6px; background:#fff; border:1px solid var(--border); border-radius:10px; padding:8px; margin-bottom:8px; box-shadow:0 1px 3px rgba(0,0,0,.04); }
+.gl-color-dot{ width:10px; height:30px; border-radius:5px; flex-shrink:0; }
+.gl-expr-input{ width:100%; border:none; outline:none; font-size:16px; font-family:Consolas,Menlo,monospace; background:transparent; }
+.gl-expr-del{ border:none; color:#999; padding:4px 6px; font-size:18px; cursor:pointer; border-radius:6px; background:none; }
+.gl-expr-del:hover{ color:#e11d48; background:#fef2f2; }
+.gl-add-btn{ margin:10px; background:var(--primary); color:#fff; border:none; font-weight:700; padding:11px; border-radius:10px; cursor:pointer; font-size:15px; font-family:inherit; transition:.15s; }
+.gl-add-btn:hover{ background:var(--primary-dark); }
+.gl-graph-area{ position:relative; flex:1; min-width:0; background:#fff; overflow:hidden; }
+.gl-graph-area canvas{ width:100%; height:100%; display:block; cursor:grab; }
+.gl-graph-area canvas.dragging{ cursor:grabbing; }
+.gl-coords{ position:absolute; top:10px; right:12px; background:rgba(255,255,255,.92); border:1px solid var(--border); padding:6px 10px; border-radius:8px; font-size:12px; color:var(--muted); font-family:Consolas,monospace; pointer-events:none; }
+.gl-zoom-ctrl{ position:absolute; right:12px; bottom:12px; display:flex; flex-direction:column; gap:5px; }
+.gl-zoom-ctrl button{ width:38px; height:38px; font-size:20px; background:#fff; border:1px solid var(--border); border-radius:8px; cursor:pointer; box-shadow:0 2px 8px rgba(0,0,0,.1); font-weight:700; transition:.15s; }
+.gl-zoom-ctrl button:hover{ background:#f3f4f6; }
+
+@media(max-width:700px){
+  .gl-app{ height:60vh; min-height:340px; }
+  .gl-panel{ width:200px; }
+  .gl-expr{ padding:6px; }
+  .gl-expr-input{ font-size:14px; }
+  .gl-add-btn{ font-size:13px; padding:9px; margin:8px; }
+}
+@media(max-width:520px){
+  .gl-main{ flex-direction:column; }
+  .gl-panel{ width:100%; max-height:140px; border-right:none; border-bottom:1px solid var(--border); }
+  .gl-expressions{ display:flex; flex-wrap:wrap; gap:6px; padding:8px; }
+  .gl-expr{ margin-bottom:0; flex:1 1 45%; min-width:140px; }
+  .gl-graph-area{ min-height:260px; }
+  .gl-top-actions .gl-btn:first-child{ display:none; }
+}
+
 /* ---------- Diagram Lab (आरेख) ---------- */
 .dg-tabs .tab.active{ background:#7c3aed; }
 .dg-hint{ background:#f5f3ff; border:1px dashed #c4b5fd; color:#6d28d9; padding:10px 14px; border-radius:12px; font-size:14.5px; line-height:1.7; margin:0 0 18px; }
@@ -749,4 +794,123 @@ table.data-table tr:nth-child(even){ background:#f8fafc; }
   .formula-item{ flex-direction:column; gap:4px; }
   .ml-live{ grid-template-columns:1fr; }
   .ml-side{ position:static; }
+}
+
+/* ---------- Mobile-First Responsive ---------- */
+@media(max-width:600px){
+  html{ scroll-behavior:auto; -webkit-text-size-adjust:100%; }
+  body{ font-size:15px; line-height:1.6; overflow-x:hidden; }
+
+  .container{ padding:14px; max-width:100vw; }
+  .section{ padding:28px 14px; }
+
+  .hero{ padding:30px 14px 36px; }
+  .hero h1{ font-size:22px; line-height:1.3; margin-bottom:10px; }
+  .hero p{ font-size:14px; }
+  .hero-buttons{ flex-direction:column; gap:10px; }
+  .hero-buttons .btn{ width:100%; font-size:16px; padding:14px 18px; }
+  .hero-stats{ gap:10px; margin-top:24px; }
+  .stat{ padding:10px 16px; }
+  .stat-num{ font-size:24px; }
+  .stat-label{ font-size:12px; }
+
+  .page-hero{ padding:26px 14px; }
+  .page-hero h1{ font-size:22px; }
+  .page-hero p{ font-size:14px; }
+
+  .section-header h2{ font-size:20px; }
+  .section-header p{ font-size:14px; }
+
+  .home-grid{ grid-template-columns:1fr; gap:14px; }
+  .feature-card{ padding:18px; }
+  .feature-card h3{ font-size:17px; }
+  .feature-card p{ font-size:13px; }
+  .feature-card .fc-icon{ font-size:34px; }
+
+  .subjects-grid{ grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:10px; }
+  .subject-card{ padding:14px 10px; }
+  .subject-card .card-icon{ width:50px; height:50px; font-size:22px; margin-bottom:8px; }
+  .subject-card h3{ font-size:15px; }
+  .subject-card p{ font-size:12px; }
+
+  .tabs{ gap:6px; margin-bottom:18px; }
+  .tab{ padding:8px 14px; font-size:13px; }
+
+  .btn{ padding:10px 18px; font-size:15px; border-radius:10px; }
+  .btn-big{ font-size:16px; padding:13px 24px; }
+  .btn-sm{ font-size:12px; padding:7px 12px; }
+
+  .notes-grid{ grid-template-columns:1fr; }
+  .note-card{ padding:16px; }
+  .note-card h3{ font-size:17px; }
+
+  .pdf-grid{ grid-template-columns:1fr; }
+  .pdf-card{ padding:14px; }
+
+  .footer{ padding:20px 14px; font-size:13px; }
+
+  /* Quiz Mobile */
+  .quiz-mode-select,.quiz-setup,.quiz-active,.quiz-result{ padding:16px; border-radius:12px; }
+  .mode-buttons{ grid-template-columns:1fr; gap:10px; }
+  .mode-btn{ padding:14px 12px; font-size:15px; }
+  .question-text{ font-size:17px; margin-bottom:14px; }
+  .option{ padding:12px 14px; font-size:15px; gap:10px; min-height:48px; }
+  .option .opt-letter{ width:28px; height:28px; font-size:14px; }
+  .option .opt-text{ flex:1; }
+  .quiz-controls .btn{ min-height:44px; }
+  .explain-panel{ padding:12px 14px; }
+  .explain-panel h4{ font-size:15px; }
+  .result-score-circle{ width:140px; height:140px; }
+  .result-score-circle span{ font-size:34px; }
+  .result-card h2{ font-size:22px; }
+
+  /* Formula Mobile */
+  .formula-item{ padding:10px 12px; }
+  .formula-item .flabel{ min-width:auto; font-size:14px; }
+  .formula-item .fval{ font-size:14px; }
+
+  /* History timeline */
+  .timeline{ padding-left:20px; }
+  .timeline::before{ left:6px; }
+  .timeline-item::before{ left:-20px; width:12px; height:12px; }
+  .timeline-item .t-title{ font-size:16px; }
+
+  /* Lab */
+  .exp-body{ padding:14px; }
+  .exp-step{ padding:10px 12px; font-size:14px; }
+
+  /* Stories */
+  .story-card{ padding:16px; }
+  .story-body{ font-size:14px; }
+
+  /* Overflows */
+  *{ overflow-wrap:break-word; }
+  img{ max-width:100%; height:auto; }
+  table{ display:block; overflow-x:auto; max-width:100%; }
+  .periodic-wrap{ overflow-x:auto; -webkit-overflow-scrolling:touch; }
+
+  /* Touch-friendly */
+  button,.option,.tab,.mode-btn,.qty-btn,.subject-card,.feature-card,.pdf-card,.story-card{ -webkit-tap-highlight-color:transparent; }
+  .option{ touch-action:manipulation; }
+  select{ font-size:16px; }
+  input,textarea{ font-size:16px; }
+}
+
+/* ---------- PWA Install Banner ---------- */
+.pwa-install-banner{
+  position:fixed; bottom:0; left:0; right:0; z-index:5000;
+  background:linear-gradient(135deg,#6366f1,#8b5cf6); color:#fff;
+  padding:14px 18px; display:none; align-items:center; gap:12px;
+  box-shadow:0 -4px 20px rgba(0,0,0,.25); border-radius:16px 16px 0 0;
+}
+.pwa-install-banner.show{ display:flex; }
+.pwa-install-banner p{ flex:1; font-size:14px; font-weight:600; margin:0; }
+.pwa-install-banner .pwa-install-btn{
+  background:#fff; color:#6366f1; border:none; padding:10px 20px;
+  border-radius:10px; font-size:14px; font-weight:800; cursor:pointer;
+  white-space:nowrap; font-family:inherit;
+}
+.pwa-install-banner .pwa-dismiss{
+  background:none; border:none; color:rgba(255,255,255,.7); font-size:20px;
+  cursor:pointer; padding:4px 8px;
 }

@@ -164,9 +164,9 @@ function renderQuestion() {
       if (isSelected && i === q.answer) cls += ' selected';
     }
     optsHtml += `
-      <div class="${cls}" id="opt-${i}" ${ans.selected === null ? `onclick="selectOption(${i})"` : ''}>
+      <div class="${cls}" id="opt-${i}" data-opt="${i}" ${ans.selected === null ? 'data-clickable="true"' : ''}>
         <span class="opt-letter">${letters[i] || (i+1)}</span>
-        <span>${escapeHtml(opt)}</span>
+        <span class="opt-text">${escapeHtml(opt)}</span>
         <span class="feedback-icon">${feedback}</span>
       </div>`;
   });
@@ -316,7 +316,8 @@ function nextQuestion() {
   if (currentQuiz.currentIndex < currentQuiz.questions.length - 1) {
     currentQuiz.currentIndex++;
     renderQuestion();
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    const quizActive = getQuizElement('quizActive');
+    if (quizActive) quizActive.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 }
 
@@ -324,7 +325,8 @@ function prevQuestion() {
   if (currentQuiz.currentIndex > 0) {
     currentQuiz.currentIndex--;
     renderQuestion();
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    const quizActive = getQuizElement('quizActive');
+    if (quizActive) quizActive.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 }
 
@@ -550,7 +552,6 @@ function extractKeywords(text) {
 // ---------- Init ----------
 document.addEventListener('DOMContentLoaded', () => {
   if (document.getElementById('quizSetup')) {
-    // Quiz page
     initQuizPage();
     if (typeof setupNav === 'function') setupNav();
   } else if (typeof setupNav === 'function') {
@@ -560,6 +561,15 @@ document.addEventListener('DOMContentLoaded', () => {
   if (document.getElementById('analysisWrap')) {
     renderAnalysis();
   }
+
+  // Event delegation for quiz option clicks (works on mobile too)
+  document.addEventListener('click', (e) => {
+    const opt = e.target.closest('.option[data-clickable]');
+    if (opt) {
+      const idx = parseInt(opt.dataset.opt);
+      if (!isNaN(idx)) selectOption(idx);
+    }
+  });
 });
 
 // export for tests
